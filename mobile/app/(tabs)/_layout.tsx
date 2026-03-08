@@ -1,12 +1,24 @@
 import { Tabs } from 'expo-router';
-import { Colors } from '../../constants/theme';
-import { View, Text } from 'react-native';
+import { Colors, Shadows } from '../../constants/theme';
+import { View, Text, Platform } from 'react-native';
+import { Feather } from '@expo/vector-icons';
 
-function TabIcon({ focused, icon, label }: { focused: boolean; icon: string; label: string }) {
+function TabIcon({ focused, icon, label }: { focused: boolean; icon: keyof typeof Feather.glyphMap; label: string }) {
     return (
-        <View style={{ alignItems: 'center' }}>
-            <Text style={{ fontSize: 20 }}>{icon}</Text>
-            <Text style={{ fontSize: 10, color: focused ? Colors.primary : Colors.textSecondary, marginTop: 2 }}>
+        <View style={{ alignItems: 'center', justifyContent: 'center', marginTop: Platform.OS === 'ios' ? 10 : 0 }}>
+            <Feather
+                name={icon}
+                size={22}
+                color={focused ? Colors.primary : Colors.textSecondary}
+                style={{ marginBottom: 4 }}
+            />
+            <Text
+                style={{
+                    fontSize: 11,
+                    fontWeight: focused ? '700' : '500',
+                    color: focused ? Colors.primary : Colors.textSecondary
+                }}
+            >
                 {label}
             </Text>
         </View>
@@ -20,27 +32,29 @@ export default function TabsLayout() {
                 headerShown: false,
                 tabBarStyle: {
                     backgroundColor: Colors.surface,
-                    borderTopColor: Colors.border,
-                    height: 70,
-                    paddingBottom: 10,
-                    paddingTop: 8,
+                    borderTopWidth: 0,
+                    height: Platform.OS === 'ios' ? 88 : 68,
+                    paddingBottom: Platform.OS === 'ios' ? 28 : 10,
+                    paddingTop: 10,
+                    elevation: 16,
+                    shadowColor: '#000',
+                    shadowOffset: { width: 0, height: -4 },
+                    shadowOpacity: 0.05,
+                    shadowRadius: 10,
                 },
-                tabBarActiveTintColor: Colors.primary,
-                tabBarInactiveTintColor: Colors.textSecondary,
+                tabBarShowLabel: false, // We're using our custom label inside TabIcon
             }}
         >
             <Tabs.Screen
                 name="attendance"
                 options={{
-                    tabBarLabel: '',
-                    tabBarIcon: ({ focused }) => <TabIcon focused={focused} icon="📋" label="Attendance" />,
+                    tabBarIcon: ({ focused }) => <TabIcon focused={focused} icon="list" label="Attendance" />,
                 }}
             />
             <Tabs.Screen
                 name="add-student"
                 options={{
-                    tabBarLabel: '',
-                    tabBarIcon: ({ focused }) => <TabIcon focused={focused} icon="➕" label="Add Student" />,
+                    tabBarIcon: ({ focused }) => <TabIcon focused={focused} icon="user-plus" label="Add Student" />,
                 }}
             />
         </Tabs>

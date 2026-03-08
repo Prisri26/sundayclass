@@ -15,12 +15,30 @@ import {
 } from 'firebase/firestore';
 import { db } from './firebase';
 
+const CLOUDINARY_CLOUD_NAME = 'dcgh5awyn';
+const CLOUDINARY_UPLOAD_PRESET = 'sunday_school';
+
+export async function uploadToCloudinary(file: File): Promise<string> {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
+    const res = await fetch(
+        `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`,
+        { method: 'POST', body: formData }
+    );
+    if (!res.ok) throw new Error('Photo upload failed');
+    const data = await res.json();
+    return data.secure_url as string;
+}
+
 export interface Student {
     id: string;
     name: string;
     class: string;
     phone: string;
-    age: number;
+    age?: number;
+    dob?: string;
+    photoUrl?: string;
     createdAt?: Timestamp;
 }
 
@@ -83,4 +101,10 @@ export function subscribeAttendance(cb: (records: AttendanceRecord[]) => void) {
 
 export function getTodayDate(): string {
     return new Date().toISOString().split('T')[0];
+}
+
+export async function getStudentAttendance(studentId: string): Promise<AttendanceRecord[]> {
+    const q = query(collection(db, 'attendance'), where('studentId', '==', studentId));
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<AttendanceRecord, 'id'>) }));
 }

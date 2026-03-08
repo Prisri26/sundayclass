@@ -10,16 +10,20 @@ import {
     onSnapshot,
     QuerySnapshot,
     DocumentData,
+    where,
 } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { db, storage } from './firebase';
+import { db } from './firebase';
+
+const CLOUDINARY_CLOUD_NAME = 'dcgh5awyn';
+const CLOUDINARY_UPLOAD_PRESET = 'sunday_school';
 
 export interface Student {
     id: string;
     name: string;
     class: string;
     phone: string;
-    age: number;
+    age?: number; // legacy
+    dob?: string; // Format: YYYY-MM-DD
     photoUrl?: string;
 }
 
@@ -64,14 +68,51 @@ export async function saveAttendance(records: AttendanceRecord[]): Promise<void>
     await Promise.all(promises);
 }
 
-// Upload a student photo to Firebase Storage, return the download URL
-export async function uploadStudentPhoto(localUri: string, studentName: string): Promise<string> {
-    const response = await fetch(localUri);
-    const blob = await response.blob();
-    const filename = `students/${studentName.replace(/\s+/g, '_')}_${Date.now()}.jpg`;
-    const storageRef = ref(storage, filename);
-    await uploadBytes(storageRef, blob);
-    return await getDownloadURL(storageRef);
+// Fetch attendance for a specific date
+export async function getAttendanceByDate(date: string): Promise<AttendanceRecord[]> {
+    const q = query(collection(db, 'attendance'), where('date', '==', date));
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(d => d.data() as AttendanceRecord);
+}
+
+// Get Class Summary for a date
+export async function getClassSummary(date: string): Promise<string> {
+    const q = query(collection(db, 'class_sessions'), where('date', '==', date));
+    const snapshot = await getDocs(q);
+    if (snapshot.empty) return '';
+    return snapshot.docs[0].data().summary || '';
+}
+
+// Save Class Summary for a date
+export async function saveClassSummary(date: string, summary: string): Promise<void> {
+    await setDoc(doc(db, 'class_sessions', date), {
+        date,
+        summary,
+        updatedAt: Timestamp.now(),
+    });
+}
+
+// Upload a student photo to Cloudinary (free, no Firebase Storage upgrade needed)
+export async function uploadStudentPhoto(localUri: string, _studentName: string): Promise<string> {
+    const formData = new FormData();
+    // React Native accepts { uri, type, name } object as FormData value
+    formData.append('file', {
+        uri: localUri,
+        type: 'image/jpeg',
+        name: `student_${Date.now()}.jpg`,
+    } as any);
+    formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
+
+    const response = await fetch(
+        `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`,
+        { method: 'POST', body: formData }
+    );
+    if (!response.ok) {
+        const err = await response.text();
+        throw new Error(`Cloudinary upload failed: ${err}`);
+    }
+    const data = await response.json();
+    return data.secure_url as string;
 }
 
 // Get today's date as YYYY-MM-DD
