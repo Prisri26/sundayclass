@@ -5,6 +5,7 @@ import {
     updateDoc,
     deleteDoc,
     doc,
+    setDoc,
     query,
     orderBy,
     Timestamp,
@@ -107,4 +108,28 @@ export async function getStudentAttendance(studentId: string): Promise<Attendanc
     const q = query(collection(db, 'attendance'), where('studentId', '==', studentId));
     const snapshot = await getDocs(q);
     return snapshot.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<AttendanceRecord, 'id'>) }));
+}
+
+// ── Jesus Loves Spotlight ────────────────────────────────────────────────────
+
+export interface SpotlightData {
+    active: boolean;
+    studentId?: string;
+    studentName?: string;
+    photoUrl?: string;
+    updatedAt?: Timestamp;
+}
+
+export function subscribeSpotlight(cb: (data: SpotlightData | null) => void) {
+    return onSnapshot(doc(db, 'spotlight', 'current'), (snap) => {
+        if (!snap.exists()) { cb(null); return; }
+        cb(snap.data() as SpotlightData);
+    });
+}
+
+export async function clearSpotlight() {
+    await setDoc(doc(db, 'spotlight', 'current'), {
+        active: false,
+        updatedAt: new Date()
+    });
 }

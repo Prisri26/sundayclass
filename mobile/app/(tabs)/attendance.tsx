@@ -10,9 +10,10 @@ import {
     ActivityIndicator,
     SafeAreaView,
 } from 'react-native';
+import { useRouter } from 'expo-router';
 import { signOut } from 'firebase/auth';
 import { auth } from '../../lib/firebase';
-import { subscribeStudents, saveAttendance, getTodayDate, Student } from '../../lib/api';
+import { subscribeStudents, saveAttendance, Student } from '../../lib/api';
 import { Colors, Radius, Shadows } from '../../constants/theme';
 import { StatusBar } from 'expo-status-bar';
 import { Feather } from '@expo/vector-icons';
@@ -44,12 +45,12 @@ function isBirthdayComingUp(dobStr?: string): boolean {
 }
 
 export default function AttendanceScreen() {
+    const router = useRouter();
     const [students, setStudents] = useState<Student[]>([]);
     const [attendance, setAttendance] = useState<AttendanceMap>({});
     const [summary, setSummary] = useState('');
     const [dateObj, setDateObj] = useState(new Date());
     const [showPicker, setShowPicker] = useState(false);
-
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
 
@@ -149,51 +150,61 @@ export default function AttendanceScreen() {
         const hasBirthday = isBirthdayComingUp(item.dob);
 
         return (
-            <View style={[styles.row, Shadows.sm, hasBirthday && styles.birthdayRow]}>
-                {/* Avatar */}
-                {item.photoUrl ? (
-                    <Image source={{ uri: item.photoUrl }} style={styles.avatarPhoto} />
-                ) : (
-                    <View style={styles.avatarContainer}>
-                        <Text style={styles.avatarText}>{item.name.charAt(0).toUpperCase()}</Text>
-                    </View>
-                )}
-
-                {/* Info */}
-                <View style={styles.studentInfo}>
-                    <Text style={[styles.studentName, hasBirthday && styles.birthdayText]} numberOfLines={1}>
-                        {item.name} {hasBirthday && '🎂'}
-                    </Text>
-                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                        <View style={styles.classBadge}>
-                            <Text style={styles.classBadgeText}>{item.class}</Text>
+            <TouchableOpacity
+                onPress={() => router.push({ pathname: '/spotlight', params: { studentId: item.id, studentName: item.name } } as any)}
+                activeOpacity={0.85}
+            >
+                <View style={[styles.row, Shadows.sm, hasBirthday && styles.birthdayRow]}>
+                    {/* Avatar */}
+                    {item.photoUrl ? (
+                        <Image source={{ uri: item.photoUrl }} style={styles.avatarPhoto} />
+                    ) : (
+                        <View style={styles.avatarContainer}>
+                            <Text style={styles.avatarText}>{item.name.charAt(0).toUpperCase()}</Text>
                         </View>
-                        {hasBirthday && (
-                            <Text style={styles.birthdayHighlightText}> Birthday Week!</Text>
-                        )}
-                    </View>
-                </View>
+                    )}
 
-                {/* Toggle */}
-                <TouchableOpacity
-                    style={[
-                        styles.toggleBtn,
-                        isPresent ? styles.presentBtn : styles.absentBtn
-                    ]}
-                    onPress={() => toggle(item.id)}
-                    activeOpacity={0.8}
-                >
-                    <Feather
-                        name={isPresent ? "check-circle" : "x-circle"}
-                        size={16}
-                        color={isPresent ? Colors.present : Colors.absent}
-                        style={{ marginRight: 6 }}
-                    />
-                    <Text style={[styles.toggleText, isPresent ? styles.presentText : styles.absentText]}>
-                        {isPresent ? 'Present' : 'Absent'}
-                    </Text>
-                </TouchableOpacity>
-            </View>
+                    {/* Info */}
+                    <View style={styles.studentInfo}>
+                        <Text style={[styles.studentName, hasBirthday && styles.birthdayText]} numberOfLines={1}>
+                            {item.name} {hasBirthday && '🎂'}
+                        </Text>
+                        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                            <View style={styles.classBadge}>
+                                <Text style={styles.classBadgeText}>{item.class}</Text>
+                            </View>
+                            {hasBirthday && (
+                                <Text style={styles.birthdayHighlightText}> Birthday Week!</Text>
+                            )}
+                        </View>
+                    </View>
+
+                    {/* ❤️ hint */}
+                    <View style={styles.jesusHint}>
+                        <Text style={{ fontSize: 20 }}>❤️</Text>
+                    </View>
+
+                    {/* Toggle */}
+                    <TouchableOpacity
+                        style={[
+                            styles.toggleBtn,
+                            isPresent ? styles.presentBtn : styles.absentBtn
+                        ]}
+                        onPress={(e) => { e.stopPropagation?.(); toggle(item.id); }}
+                        activeOpacity={0.8}
+                    >
+                        <Feather
+                            name={isPresent ? "check-circle" : "x-circle"}
+                            size={16}
+                            color={isPresent ? Colors.present : Colors.absent}
+                            style={{ marginRight: 6 }}
+                        />
+                        <Text style={[styles.toggleText, isPresent ? styles.presentText : styles.absentText]}>
+                            {isPresent ? 'Present' : 'Absent'}
+                        </Text>
+                    </TouchableOpacity>
+                </View>
+            </TouchableOpacity>
         );
     };
 
@@ -522,4 +533,13 @@ const styles = StyleSheet.create({
     loadingText: { marginTop: 12, color: Colors.textSecondary, fontSize: 15, fontWeight: '500' },
     emptyText: { fontSize: 18, fontWeight: '700', color: Colors.text, marginBottom: 8 },
     emptySubtext: { fontSize: 14, color: Colors.textSecondary },
+
+    // Jesus Loves hint (shows ❤️ on right of row as a hint)
+    jesusHint: {
+        width: 36, height: 36, borderRadius: 18,
+        backgroundColor: '#FEF2F2',
+        alignItems: 'center', justifyContent: 'center',
+        marginRight: 8,
+        borderWidth: 1, borderColor: '#FECACA',
+    },
 });

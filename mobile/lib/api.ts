@@ -119,3 +119,22 @@ export async function uploadStudentPhoto(localUri: string, _studentName: string)
 export function getTodayDate(): string {
     return new Date().toISOString().split('T')[0];
 }
+
+// ── Jesus Loves Spotlight ────────────────────────────────────────────────────
+
+export async function setSpotlight(studentId: string, studentName: string, photoUrl: string): Promise<void> {
+    await setDoc(doc(db, 'spotlight', 'current'), {
+        studentId,
+        studentName,
+        photoUrl,
+        updatedAt: Timestamp.now(),
+        active: true,
+    });
+}
+
+export async function clearSpotlight(): Promise<void> {
+    await setDoc(doc(db, 'spotlight', 'current'), {
+        active: false,
+        updatedAt: Timestamp.now(),
+    });
+}

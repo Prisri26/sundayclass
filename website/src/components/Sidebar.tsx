@@ -9,6 +9,7 @@ const navItems = [
     { href: '/students', label: 'Students', icon: '👥' },
     { href: '/attendance', label: 'Attendance', icon: '📋' },
     { href: '/reports', label: 'Reports', icon: '📑' },
+    { href: '/live', label: 'Live Feed 🔴', icon: '📹' },
 ];
 
 export default function Sidebar() {
