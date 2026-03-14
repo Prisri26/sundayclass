@@ -1,0 +1,134 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function userDoc() {
+      return /databases/$(database)/documents/users/$(request.auth.uid);
+    }
+
+    function isPlatformAdmin() {
+      return isSignedIn()
+        && exists(userDoc())
+        && get(userDoc()).data.globalRole == 'platform_admin';
+    }
+
+    function memberDoc(churchId) {
+      return /databases/$(database)/documents/churches/$(churchId)/members/$(request.auth.uid);
+    }
+
+    function isChurchMember(churchId) {
+      return isSignedIn()
+        && exists(memberDoc(churchId))
+        && get(memberDoc(churchId)).data.status == 'active';
+    }
+
+    function churchRole(churchId) {
+      return get(memberDoc(churchId)).data.role;
+    }
+
+    function isChurchAdmin(churchId) {
+      return isPlatformAdmin()
+        || (isChurchMember(churchId) && churchRole(churchId) == 'church_admin');
+    }
+
+    function isTeacher(churchId) {
+      return isChurchMember(churchId) && churchRole(churchId) == 'teacher';
+    }
+
+    function isVolunteer(churchId) {
+      return isChurchMember(churchId) && churchRole(churchId) == 'volunteer';
+    }
+
+    function isViewer(churchId) {
+      return isChurchMember(churchId) && churchRole(churchId) == 'viewer';
+    }
+
+    function canReadChurch(churchId) {
+      return isPlatformAdmin() || isChurchMember(churchId);
+    }
+
+    function canManageChurch(churchId) {
+      return isChurchAdmin(churchId);
+    }
+
+    function canWriteOperationalData(churchId) {
+      return isChurchAdmin(churchId) || isTeacher(churchId) || isVolunteer(churchId);
+    }
+
+    match /users/{userId} {
+      allow read: if isSignedIn() && (request.auth.uid == userId || isPlatformAdmin());
+      allow create: if isSignedIn() && request.auth.uid == userId;
+      allow update: if isSignedIn() && (request.auth.uid == userId || isPlatformAdmin());
+      allow delete: if isPlatformAdmin();
+    }
+
+    match /churches/{churchId} {
+      allow read: if canReadChurch(churchId);
+      allow create: if isPlatformAdmin();
+      allow update, delete: if canManageChurch(churchId) || isPlatformAdmin();
+
+      match /members/{userId} {
+        allow read: if canReadChurch(churchId);
+        allow create, update, delete: if canManageChurch(churchId) || isPlatformAdmin();
+      }
+
+      match /settings/{docId} {
+        allow read: if canReadChurch(churchId);
+        allow create, update, delete: if canManageChurch(churchId) || isPlatformAdmin();
+      }
+
+      match /classes/{classId} {
+        allow read: if canReadChurch(churchId);
+        allow create, update, delete: if canManageChurch(churchId);
+      }
+
+      match /students/{studentId} {
+        allow read: if canReadChurch(churchId);
+        allow create, update: if canWriteOperationalData(churchId);
+        allow delete: if canManageChurch(churchId);
+      }
+
+      match /parents/{parentId} {
+        allow read: if canReadChurch(churchId);
+        allow create, update: if canWriteOperationalData(churchId);
+        allow delete: if canManageChurch(churchId);
+      }
+
+      match /attendanceSessions/{sessionId} {
+        allow read: if canReadChurch(churchId);
+        allow create, update: if canWriteOperationalData(churchId);
+        allow delete: if canManageChurch(churchId);
+      }
+
+      match /attendanceRecords/{recordId} {
+        allow read: if canReadChurch(churchId);
+        allow create, update: if canWriteOperationalData(churchId);
+        allow delete: if canManageChurch(churchId);
+      }
+
+      match /announcements/{announcementId} {
+        allow read: if canReadChurch(churchId);
+        allow create, update, delete: if canManageChurch(churchId);
+      }
+
+      match /events/{eventId} {
+        allow read: if canReadChurch(churchId);
+        allow create, update, delete: if canManageChurch(churchId);
+      }
+
+      match /followUps/{followUpId} {
+        allow read: if canReadChurch(churchId);
+        allow create, update: if canWriteOperationalData(churchId);
+        allow delete: if canManageChurch(churchId);
+      }
+
+      match /spotlight/{docId} {
+        allow read: if true;
+        allow create, update, delete: if canWriteOperationalData(churchId);
+      }
+    }
+  }
+}

@@ -1,0 +1,38 @@
+{
+  "expo": {
+    "name": "Sunday School Attendance",
+    "slug": "sunday-school-attendance",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#4F46E5"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.sundayschool.attendance"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png"
+      },
+      "package": "com.sundayschool.attendance"
+    },
+    "scheme": "sunday-school",
+    "plugins": [
+      "expo-router",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Sunday School Attendance needs access to your photos to set student profile pictures.",
+          "cameraPermission": "Sunday School Attendance needs access to your camera to take student profile pictures."
+        }
+      ]
+    ]
+  }
+}
