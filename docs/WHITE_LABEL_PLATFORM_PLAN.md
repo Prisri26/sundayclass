@@ -21,7 +21,7 @@ Target state:
 
 Sundayclass should evolve into a church operations platform with these main capabilities:
 
-- Student and class management
+- Student and center management
 - Attendance tracking
 - Teacher and volunteer access
 - Parent communication
@@ -118,7 +118,7 @@ churches/{churchId}/settings/general
 churches/{churchId}/settings/branding
 churches/{churchId}/settings/features
 churches/{churchId}/members/{membershipId}
-churches/{churchId}/classes/{classId}
+churches/{churchId}/centers/{centerId}
 churches/{churchId}/students/{studentId}
 churches/{churchId}/parents/{parentId}
 churches/{churchId}/attendanceSessions/{sessionId}
@@ -170,7 +170,7 @@ type Membership = {
   userId: string;
   churchId: string;
   role: 'church_admin' | 'teacher' | 'volunteer' | 'viewer';
-  classIds?: string[];
+  centerIds?: string[];
   status: 'active' | 'invited' | 'disabled';
   createdAt: Timestamp;
   updatedAt: Timestamp;
@@ -179,17 +179,19 @@ type Membership = {
 
 This is the most important collection for authorization.
 
-### 7.3 classes
+### 7.3 centers
 
 ```ts
-type ClassRoom = {
+type Center = {
   id: string;
   name: string;
   code: string;
-  ageRange?: string;
+  hostName?: string;
+  areaName?: string;
+  address?: string;
   teacherIds?: string[];
-  roomName?: string;
   active: boolean;
+  isChurchLevel?: boolean;
   createdAt: Timestamp;
   updatedAt: Timestamp;
 };
@@ -204,7 +206,7 @@ type Student = {
   preferredName?: string;
   gender?: string;
   dob?: string;
-  classId: string;
+  centerId?: string;
   parentIds?: string[];
   primaryPhone?: string;
   address?: string;
@@ -235,13 +237,14 @@ type Parent = {
 
 ### 7.6 attendanceSessions
 
-Represents a specific class meeting or church session.
+Represents either a center-level Sunday class or a church-level Sunday class.
 
 ```ts
 type AttendanceSession = {
   id: string;
   date: string;
-  classId: string;
+  centerId?: string;
+  scope: 'church' | 'center';
   title?: string;
   summary?: string;
   conductedByUserId: string;
@@ -258,7 +261,7 @@ type AttendanceRecord = {
   id: string;
   sessionId: string;
   studentId: string;
-  classId: string;
+  centerId?: string;
   date: string;
   status: 'present' | 'absent' | 'late' | 'excused';
   note?: string;
@@ -274,8 +277,8 @@ type Announcement = {
   id: string;
   title: string;
   body: string;
-  audience: 'all' | 'teachers' | 'parents' | 'class';
-  classIds?: string[];
+  audience: 'all' | 'teachers' | 'parents' | 'center';
+  centerIds?: string[];
   publishedAt?: Timestamp;
   createdByUserId: string;
   createdAt: Timestamp;
@@ -293,7 +296,7 @@ type Event = {
   startAt: Timestamp;
   endAt?: Timestamp;
   location?: string;
-  classIds?: string[];
+  centerIds?: string[];
   active: boolean;
   createdAt: Timestamp;
   updatedAt: Timestamp;
@@ -407,10 +410,10 @@ type GeneralSettings = {
   - Manage members, classes, settings, students, attendance, reports
 
 - `teacher`
-  - Manage assigned classes
+  - Manage assigned centers
   - Mark attendance
-  - View class reports
-  - Add class notes
+  - View center reports
+  - Add session notes
 
 - `volunteer`
   - Limited attendance entry and viewing
@@ -423,9 +426,9 @@ type GeneralSettings = {
 | Action | church_admin | teacher | volunteer | viewer |
 |---|---|---|---|---|
 | Manage church settings | Yes | No | No | No |
-| Add/edit students | Yes | Assigned classes | Limited | No |
-| Mark attendance | Yes | Assigned classes | Assigned classes | No |
-| View reports | Yes | Assigned classes | Limited | Yes |
+| Add/edit students | Yes | Assigned centers | Limited | No |
+| Mark attendance | Yes | Assigned centers | Assigned centers | No |
+| View reports | Yes | Assigned centers | Limited | Yes |
 | Manage branding | Yes | No | No | No |
 
 ---
@@ -446,7 +449,7 @@ New rules should verify:
 - Keep platform admin logic separate
 - Use membership lookups for tenant authorization
 - Restrict write access by role
-- Restrict teachers to assigned classes
+- Restrict teachers to assigned centers
 
 ### Example direction
 
@@ -608,7 +611,7 @@ Recommended service areas:
 - `churchs`
 - `memberships`
 - `students`
-- `classes`
+- `centers`
 - `attendance`
 - `settings`
 - `branding`

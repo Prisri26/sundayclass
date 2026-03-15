@@ -4,11 +4,11 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '../../context/AuthContext';
 import { useChurch } from '../../context/ChurchContext';
 import Sidebar from '../../components/Sidebar';
-import { getAttendance, getStudents, AttendanceRecord, Student } from '../../lib/api';
+import { getAttendance, getStudentCenterLabel, getStudents, AttendanceRecord, Student } from '../../lib/api';
 
 export default function ReportsPage() {
     const { user, loading } = useAuth();
-    const { activeChurchId } = useChurch();
+    const { activeChurchId, activeMembership, activeChurch, branding, multiTenantEnabled } = useChurch();
     const router = useRouter();
     const [records, setRecords] = useState<AttendanceRecord[]>([]);
     const [students, setStudents] = useState<Student[]>([]);
@@ -21,7 +21,7 @@ export default function ReportsPage() {
     }, [user, loading, router]);
 
     useEffect(() => {
-        if (!user) return;
+        if (!user || !activeChurchId || !activeMembership) return;
         Promise.all([
             getAttendance(activeChurchId ?? undefined),
             getStudents(activeChurchId ?? undefined)
@@ -29,7 +29,7 @@ export default function ReportsPage() {
             setRecords(att);
             setStudents(stu);
         });
-    }, [user, activeChurchId]);
+    }, [user, activeChurchId, activeMembership]);
 
     if (loading || !user) return <div className="loading-page"><div className="spinner" /></div>;
 
@@ -47,7 +47,7 @@ export default function ReportsPage() {
             return {
                 Date: r.date,
                 'Student Name': stu?.name || 'Unknown',
-                Class: stu?.class || '',
+                Center: stu ? getStudentCenterLabel(stu) : '',
                 Status: r.status.charAt(0).toUpperCase() + r.status.slice(1),
             };
         });
@@ -55,7 +55,7 @@ export default function ReportsPage() {
     const exportCSV = () => {
         setExporting(true);
         const rows = buildRows();
-        const headers = Object.keys(rows[0] || { Date: '', 'Student Name': '', Class: '', Status: '' });
+        const headers = Object.keys(rows[0] || { Date: '', 'Student Name': '', Center: '', Status: '' });
         const csv = [
             headers.join(','),
             ...rows.map((r) => headers.map((h) => `"${(r as any)[h]}"`).join(',')),
@@ -90,11 +90,46 @@ export default function ReportsPage() {
     const presentCount = filtered.filter((r) => r.status === 'present').length;
     const absentCount = filtered.filter((r) => r.status === 'absent').length;
     const uniqueDates = [...new Set(filtered.map((r) => r.date))].length;
+    const uniqueStudents = new Set(filtered.map((r) => r.studentId)).size;
+    const workspaceName = branding?.churchDisplayName || activeChurch?.name || 'your church workspace';
 
     return (
         <div className="app-layout">
             <Sidebar />
             <main className="main-content">
+                <section className="admin-hero">
+                    <div className="admin-hero-grid">
+                        <div>
+                            <div className="admin-hero-eyebrow">Reports & Export</div>
+                            <div className="admin-hero-title">Turn attendance history into clean church reports</div>
+                            <div className="admin-hero-copy">
+                                Filter a date range, preview the records, and export attendance into CSV or Excel for leaders, audits, and follow-up planning.
+                            </div>
+                            <div className="admin-hero-actions">
+                                <div className="admin-hero-chip">⛪ {workspaceName}</div>
+                                <div className="admin-hero-chip">📑 {filtered.length} records in range</div>
+                            </div>
+                        </div>
+                        <div className="admin-hero-panel">
+                            <div className="admin-hero-panel-title">Report snapshot</div>
+                            <div className="admin-hero-panel-list">
+                                <div className="admin-hero-panel-item">
+                                    <div className="admin-hero-panel-label">Tracked days</div>
+                                    <div className="admin-hero-panel-value">{uniqueDates}</div>
+                                </div>
+                                <div className="admin-hero-panel-item">
+                                    <div className="admin-hero-panel-label">Students covered</div>
+                                    <div className="admin-hero-panel-value">{uniqueStudents}</div>
+                                </div>
+                                <div className="admin-hero-panel-item">
+                                    <div className="admin-hero-panel-label">Present marks</div>
+                                    <div className="admin-hero-panel-value">{presentCount}</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
                 <div className="topbar">
                     <div>
                         <div className="topbar-title">📑 Reports</div>
@@ -102,25 +137,45 @@ export default function ReportsPage() {
                     </div>
                 </div>
 
-                {/* Summary Tiles */}
-                <div className="stats-grid" style={{ marginBottom: '20px' }}>
-                    <div className="stat-card">
-                        <div className="stat-icon" style={{ background: '#EEF2FF' }}>📅</div>
-                        <div><div className="stat-num">{uniqueDates}</div><div className="stat-label">Days Tracked</div></div>
+                {multiTenantEnabled && !activeMembership ? (
+                    <div className="card">
+                        <div className="empty-state">
+                            <div className="empty-state-icon">🔒</div>
+                            <div className="empty-state-text">No church membership linked yet</div>
+                            <div className="empty-state-sub">Ask your church admin to add your UID in the Members page.</div>
+                        </div>
                     </div>
-                    <div className="stat-card">
-                        <div className="stat-icon" style={{ background: '#D1FAE5' }}>✅</div>
-                        <div><div className="stat-num" style={{ color: 'var(--present)' }}>{presentCount}</div><div className="stat-label">Total Present</div></div>
+                ) : (
+                <>
+                <div className="summary-grid">
+                    <div className="summary-card">
+                        <div className="summary-label">Days tracked</div>
+                        <div className="summary-value">{uniqueDates}</div>
                     </div>
-                    <div className="stat-card">
-                        <div className="stat-icon" style={{ background: '#FEE2E2' }}>❌</div>
-                        <div><div className="stat-num" style={{ color: 'var(--absent)' }}>{absentCount}</div><div className="stat-label">Total Absent</div></div>
+                    <div className="summary-card">
+                        <div className="summary-label">Present marks</div>
+                        <div className="summary-value" style={{ color: 'var(--present)' }}>{presentCount}</div>
+                    </div>
+                    <div className="summary-card">
+                        <div className="summary-label">Absent marks</div>
+                        <div className="summary-value" style={{ color: 'var(--absent)' }}>{absentCount}</div>
+                    </div>
+                    <div className="summary-card">
+                        <div className="summary-label">Students covered</div>
+                        <div className="summary-value">{uniqueStudents}</div>
                     </div>
                 </div>
 
-                <div className="card">
+                <div className="card section-card">
                     {/* Date Range Filters */}
-                    <div className="toolbar" style={{ marginBottom: '24px' }}>
+                    <div className="section-head">
+                        <div>
+                            <div className="section-title">Export filters</div>
+                            <div className="section-copy">Choose a date range and export the matching attendance records.</div>
+                        </div>
+                    </div>
+                    <div className="soft-panel" style={{ marginBottom: '24px' }}>
+                    <div className="toolbar" style={{ marginBottom: 0 }}>
                         <div className="filter-bar">
                             <span className="filter-label">From:</span>
                             <input type="date" className="form-input" style={{ width: 'auto' }} value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
@@ -139,6 +194,7 @@ export default function ReportsPage() {
                             </button>
                         </div>
                     </div>
+                    </div>
 
                     {/* Preview Table */}
                     {filtered.length === 0 ? (
@@ -149,6 +205,12 @@ export default function ReportsPage() {
                         </div>
                     ) : (
                         <>
+                            <div className="section-head">
+                                <div>
+                                    <div className="section-title">Report preview</div>
+                                    <div className="section-copy">Preview the export before downloading it.</div>
+                                </div>
+                            </div>
                             <div style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '12px' }}>
                                 Previewing {filtered.length} records
                             </div>
@@ -158,7 +220,7 @@ export default function ReportsPage() {
                                         <tr>
                                             <th>Date</th>
                                             <th>Student Name</th>
-                                            <th>Class</th>
+                                            <th>Center</th>
                                             <th>Status</th>
                                         </tr>
                                     </thead>
@@ -174,7 +236,7 @@ export default function ReportsPage() {
                                                             <span style={{ fontWeight: 600 }}>{stu?.name || 'Unknown'}</span>
                                                         </div>
                                                     </td>
-                                                    <td>{stu?.class || '—'}</td>
+                                                    <td>{stu ? getStudentCenterLabel(stu) : '—'}</td>
                                                     <td>
                                                         <span className={`badge badge-${r.status}`}>
                                                             {r.status === 'present' ? '✓' : '✗'} {r.status.charAt(0).toUpperCase() + r.status.slice(1)}
@@ -194,6 +256,8 @@ export default function ReportsPage() {
                         </>
                     )}
                 </div>
+                </>
+                )}
             </main>
         </div>
     );

@@ -1,260 +1,190 @@
 'use client';
-import { useEffect, useState } from 'react';
+
+import { useEffect, useMemo, useState } from 'react';
+import Sidebar from '../../components/Sidebar';
 import { subscribeSpotlight, SpotlightData, clearSpotlight } from '../../lib/api';
 import { useChurch } from '../../context/ChurchContext';
 
 export default function LivePage() {
-    const { activeChurchId } = useChurch();
+    const { activeChurchId, activeMembership, activeChurch, branding, multiTenantEnabled } = useChurch();
     const [spotlight, setSpotlight] = useState<SpotlightData | null>(null);
     const [imgErr, setImgErr] = useState(false);
-    const [pulse, setPulse] = useState(false);
-    const [mounted, setMounted] = useState(false);
     const [resetting, setResetting] = useState(false);
 
     useEffect(() => {
-        setMounted(true);
+        if (multiTenantEnabled && (!activeChurchId || !activeMembership)) {
+            setSpotlight(null);
+            return;
+        }
+
         return subscribeSpotlight((data) => {
             setSpotlight(data);
             setImgErr(false);
-            // Trigger pulse animation on new spotlight
-            setPulse(true);
-            setTimeout(() => setPulse(false), 800);
         }, activeChurchId ?? undefined);
-    }, [activeChurchId]);
+    }, [activeChurchId, activeMembership, multiTenantEnabled]);
 
     const isActive = spotlight?.active && spotlight?.photoUrl;
+    const workspaceName = branding?.churchDisplayName || activeChurch?.name || 'Church workspace';
+    const liveSubtitle = useMemo(
+        () => branding?.welcomeSubtitle || 'Project the current student spotlight beautifully for your church gathering.',
+        [branding]
+    );
 
     const handleReset = async () => {
         if (resetting) return;
         setResetting(true);
         try {
             await clearSpotlight(activeChurchId ?? undefined);
-        } catch (err: any) {
-            console.error('Failed to reset spotlight:', err);
-            alert('Failed to reset. Make sure you are logged into the dashboard to have permission.');
         } finally {
             setResetting(false);
         }
     };
 
     return (
-        <div style={{
-            minHeight: '100vh',
-            background: 'linear-gradient(135deg, #0F0C29, #302B63, #24243e)',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontFamily: "'Inter', sans-serif",
-            overflow: 'hidden',
-            position: 'relative',
-        }}>
-            {/* Animated background stars */}
-            {mounted && (
-                <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', pointerEvents: 'none' }}>
-                    {[...Array(20)].map((_, i) => (
-                        <div key={i} style={{
-                            position: 'absolute',
-                            width: Math.random() * 4 + 1,
-                            height: Math.random() * 4 + 1,
-                            borderRadius: '50%',
-                            background: 'white',
-                            left: `${Math.random() * 100}%`,
-                            top: `${Math.random() * 100}%`,
-                            opacity: Math.random() * 0.7 + 0.1,
-                            animation: `twinkle ${Math.random() * 3 + 2}s ease-in-out infinite alternate`,
-                            animationDelay: `${Math.random() * 3}s`,
-                        }} />
-                    ))}
-                </div>
-            )}
-
-            <style>{`
-                @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;800;900&display=swap');
-                @keyframes twinkle { from { opacity: 0.1; } to { opacity: 0.8; } }
-                @keyframes fadeInUp { from { opacity: 0; transform: translateY(40px) scale(0.95); } to { opacity: 1; transform: translateY(0) scale(1); } }
-                @keyframes heartbeat { 0%,100% { transform: scale(1); } 14% { transform: scale(1.15); } 28% { transform: scale(1); } 42% { transform: scale(1.08); } 70% { transform: scale(1); } }
-                @keyframes glow { 0%,100% { box-shadow: 0 0 40px rgba(167,139,250,0.4), 0 0 80px rgba(139,92,246,0.2); } 50% { box-shadow: 0 0 80px rgba(167,139,250,0.8), 0 0 160px rgba(139,92,246,0.4); } }
-                @keyframes pulse-ring { 0% { transform: scale(1); opacity: 0.8; } 100% { transform: scale(1.5); opacity: 0; } }
-                @keyframes slideIn { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
-                .reset-btn:hover { background: rgba(255,255,255,0.2) !important; opacity: 1 !important; transform: scale(1.05); }
-            `}</style>
-
-            {isActive ? (
-                /* ─── SPOTLIGHT ACTIVE ─── */
-                <div style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    gap: 0,
-                    animation: 'fadeInUp 0.6s ease forwards',
-                    textAlign: 'center',
-                    padding: '40px 20px',
-                }}>
-                    {/* Top label */}
-                    <div style={{
-                        fontSize: 'clamp(18px, 3vw, 28px)',
-                        color: 'rgba(255,255,255,0.7)',
-                        fontWeight: 700,
-                        letterSpacing: 4,
-                        textTransform: 'uppercase',
-                        marginBottom: 32,
-                        animation: 'slideIn 0.5s ease 0.1s both',
-                    }}>
-                        ✝️ &nbsp; Jesus Loves
+        <div className="app-layout">
+            <Sidebar />
+            <main className="main-content">
+                <section className="admin-hero">
+                    <div className="admin-hero-grid">
+                        <div>
+                            <div className="admin-hero-eyebrow">Live Feed</div>
+                            <div className="admin-hero-title">Run a polished live spotlight screen for your church</div>
+                            <div className="admin-hero-copy">{liveSubtitle}</div>
+                            <div className="admin-hero-actions">
+                                <div className="admin-hero-chip">📺 {workspaceName}</div>
+                                <div className="admin-hero-chip">{isActive ? '🔴 Live now' : '⚪ Waiting'}</div>
+                            </div>
+                        </div>
+                        <div className="admin-hero-panel">
+                            <div className="admin-hero-panel-title">Live status</div>
+                            <div className="admin-hero-panel-list">
+                                <div className="admin-hero-panel-item">
+                                    <div className="admin-hero-panel-label">Current mode</div>
+                                    <div className="admin-hero-panel-value">{isActive ? 'Live' : 'Idle'}</div>
+                                </div>
+                                <div className="admin-hero-panel-item">
+                                    <div className="admin-hero-panel-label">Student name</div>
+                                    <div className="admin-hero-panel-value" style={{ fontSize: 18 }}>
+                                        {spotlight?.studentName || 'None'}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
+                </section>
 
-                    {/* Photo with glowing ring */}
-                    <div style={{ position: 'relative', marginBottom: 40 }}>
-                        {/* Pulsing rings */}
-                        <div style={{
-                            position: 'absolute', inset: -16, borderRadius: '50%',
-                            border: '3px solid rgba(167,139,250,0.6)',
-                            animation: 'pulse-ring 2s ease-out infinite',
-                        }} />
-                        <div style={{
-                            position: 'absolute', inset: -8, borderRadius: '50%',
-                            border: '2px solid rgba(167,139,250,0.4)',
-                            animation: 'pulse-ring 2s ease-out infinite',
-                            animationDelay: '0.5s',
-                        }} />
+                {multiTenantEnabled && !activeMembership ? (
+                    <div className="card">
+                        <div className="empty-state">
+                            <div className="empty-state-icon">🔒</div>
+                            <div className="empty-state-text">No church membership linked yet</div>
+                            <div className="empty-state-sub">Ask your church admin to add your UID in the Members page.</div>
+                        </div>
+                    </div>
+                ) : (
+                    <div
+                        className="card"
+                        style={{
+                            minHeight: 'calc(100vh - 250px)',
+                            padding: 28,
+                            background:
+                                'radial-gradient(circle at top right, rgba(255,255,255,0.12), transparent 18%), linear-gradient(135deg, #0F0C29 0%, #302B63 58%, #1E1B4B 100%)',
+                            color: 'white',
+                            position: 'relative',
+                            overflow: 'hidden',
+                        }}
+                    >
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap', marginBottom: 20 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                                <div style={{ width: 12, height: 12, borderRadius: '50%', background: isActive ? '#EF4444' : 'rgba(255,255,255,0.35)' }} />
+                                <div style={{ fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.78)', fontSize: 12 }}>
+                                    {isActive ? 'Live spotlight' : 'Waiting for spotlight'}
+                                </div>
+                            </div>
+                            {isActive && (
+                                <button className="btn btn-ghost" onClick={handleReset} disabled={resetting} style={{ color: 'white', borderColor: 'rgba(255,255,255,0.2)', background: 'rgba(255,255,255,0.08)' }}>
+                                    {resetting ? 'Resetting...' : 'Clear Live'}
+                                </button>
+                            )}
+                        </div>
 
-                        {/* Photo */}
-                        {spotlight.photoUrl && !imgErr ? (
-                            <img
-                                src={spotlight.photoUrl}
-                                alt={spotlight.studentName}
-                                onError={() => setImgErr(true)}
-                                style={{
-                                    width: 'clamp(200px, 30vw, 380px)',
-                                    height: 'clamp(200px, 30vw, 380px)',
-                                    borderRadius: '50%',
-                                    objectFit: 'cover',
-                                    border: '6px solid rgba(167,139,250,0.8)',
-                                    animation: 'glow 3s ease-in-out infinite',
-                                    display: 'block',
-                                }}
-                            />
+                        {isActive ? (
+                            <div style={{ display: 'grid', gridTemplateColumns: 'minmax(300px, 0.95fr) minmax(0, 1.05fr)', gap: 28, alignItems: 'center', minHeight: '100%' }}>
+                                <div style={{ display: 'grid', placeItems: 'center' }}>
+                                    {spotlight?.photoUrl && !imgErr ? (
+                                        <img
+                                            src={spotlight.photoUrl}
+                                            alt={spotlight.studentName}
+                                            onError={() => setImgErr(true)}
+                                            style={{
+                                                width: 'min(100%, 420px)',
+                                                aspectRatio: '1 / 1',
+                                                objectFit: 'cover',
+                                                borderRadius: '50%',
+                                                border: '8px solid rgba(196,181,253,0.86)',
+                                                boxShadow: '0 0 70px rgba(167,139,250,0.35)',
+                                            }}
+                                        />
+                                    ) : (
+                                        <div
+                                            style={{
+                                                width: 'min(100%, 420px)',
+                                                aspectRatio: '1 / 1',
+                                                borderRadius: '50%',
+                                                display: 'grid',
+                                                placeItems: 'center',
+                                                background: 'linear-gradient(135deg, #7C3AED, #4F46E5)',
+                                                border: '8px solid rgba(196,181,253,0.86)',
+                                                boxShadow: '0 0 70px rgba(167,139,250,0.35)',
+                                                fontSize: 'clamp(90px, 12vw, 160px)',
+                                                fontWeight: 900,
+                                            }}
+                                        >
+                                            {spotlight?.studentName?.charAt(0).toUpperCase()}
+                                        </div>
+                                    )}
+                                </div>
+
+                                <div>
+                                    <div style={{ fontSize: 20, fontWeight: 800, letterSpacing: '0.16em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.74)', marginBottom: 18 }}>
+                                        Jesus Loves
+                                    </div>
+                                    <div style={{ fontSize: 'clamp(44px, 6vw, 92px)', fontWeight: 900, lineHeight: 1.02, letterSpacing: '-0.05em', marginBottom: 16 }}>
+                                        {spotlight?.studentName}
+                                    </div>
+                                    <div
+                                        style={{
+                                            fontSize: 'clamp(24px, 3vw, 42px)',
+                                            fontWeight: 800,
+                                            background: 'linear-gradient(90deg, #F9A8D4, #C084FC, #818CF8)',
+                                            WebkitBackgroundClip: 'text',
+                                            WebkitTextFillColor: 'transparent',
+                                            marginBottom: 24,
+                                        }}
+                                    >
+                                        the most! ❤️
+                                    </div>
+                                    <div style={{ maxWidth: 520, color: 'rgba(255,255,255,0.76)', fontSize: 16, lineHeight: 1.75 }}>
+                                        Celebrate the student on the big screen while the church watches the live feed with a clean, branded spotlight view.
+                                    </div>
+                                </div>
+                            </div>
                         ) : (
-                            <div style={{
-                                width: 'clamp(200px, 30vw, 380px)',
-                                height: 'clamp(200px, 30vw, 380px)',
-                                borderRadius: '50%',
-                                background: 'linear-gradient(135deg, #7C3AED, #4F46E5)',
-                                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                fontSize: 'clamp(80px, 15vw, 160px)',
-                                color: 'white', fontWeight: 800,
-                                border: '6px solid rgba(167,139,250,0.8)',
-                                animation: 'glow 3s ease-in-out infinite',
-                            }}>
-                                {spotlight.studentName?.charAt(0).toUpperCase()}
+                            <div style={{ minHeight: 440, display: 'grid', placeItems: 'center', textAlign: 'center', padding: 20 }}>
+                                <div>
+                                    <div style={{ fontSize: 80, marginBottom: 24, opacity: 0.55 }}>✝️</div>
+                                    <div style={{ fontSize: 'clamp(28px, 4vw, 52px)', fontWeight: 900, marginBottom: 12 }}>
+                                        Jesus Loves Everyone
+                                    </div>
+                                    <div style={{ fontSize: 17, color: 'rgba(255,255,255,0.62)', maxWidth: 560, lineHeight: 1.8 }}>
+                                        Waiting for a teacher to capture the next spotlight student from the mobile app.
+                                    </div>
+                                </div>
                             </div>
                         )}
                     </div>
-
-                    {/* Student Name */}
-                    <div style={{
-                        fontSize: 'clamp(36px, 8vw, 96px)',
-                        fontWeight: 900,
-                        color: 'white',
-                        lineHeight: 1.1,
-                        marginBottom: 16,
-                        textShadow: '0 4px 30px rgba(167,139,250,0.5)',
-                        animation: 'slideIn 0.5s ease 0.2s both',
-                    }}>
-                        {spotlight.studentName}
-                    </div>
-
-                    {/* "the most!" tagline */}
-                    <div style={{
-                        fontSize: 'clamp(22px, 4vw, 52px)',
-                        fontWeight: 800,
-                        background: 'linear-gradient(90deg, #F9A8D4, #C084FC, #818CF8)',
-                        WebkitBackgroundClip: 'text',
-                        WebkitTextFillColor: 'transparent',
-                        marginBottom: 40,
-                        animation: 'slideIn 0.5s ease 0.35s both',
-                    }}>
-                        the most! ❤️
-                    </div>
-
-                    {/* Heartbeat emoji */}
-                    <div style={{
-                        fontSize: 'clamp(48px, 8vw, 90px)',
-                        animation: 'heartbeat 1.5s ease infinite',
-                    }}>
-                        ❤️
-                    </div>
-
-                    {/* Live indicator & reset top right */}
-                    <div style={{
-                        position: 'fixed', top: 24, right: 24,
-                        display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 12, zIndex: 50
-                    }}>
-                        {/* Live badge */}
-                        <div style={{
-                            display: 'flex', alignItems: 'center', gap: 8,
-                            background: 'rgba(239,68,68,0.2)',
-                            border: '1px solid rgba(239,68,68,0.5)',
-                            borderRadius: 999, padding: '8px 18px',
-                        }}>
-                            <div style={{
-                                width: 10, height: 10, borderRadius: '50%',
-                                background: '#EF4444',
-                                animation: 'heartbeat 1s ease infinite',
-                            }} />
-                            <span style={{ color: '#FCA5A5', fontWeight: 700, fontSize: 14, letterSpacing: 2 }}>LIVE</span>
-                        </div>
-
-                        {/* Reset button */}
-                        <button
-                            onClick={handleReset}
-                            disabled={resetting}
-                            className="reset-btn"
-                            style={{
-                                background: 'rgba(255,255,255,0.1)',
-                                border: '1px solid rgba(255,255,255,0.2)',
-                                color: 'white',
-                                padding: '6px 14px',
-                                borderRadius: 999,
-                                fontSize: 12,
-                                fontWeight: 600,
-                                cursor: 'pointer',
-                                display: 'flex', alignItems: 'center', gap: 6,
-                                opacity: 0.7,
-                                transition: 'all 0.2s'
-                            }}>
-                            {resetting ? 'Resetting...' : '✕ Clear Live'}
-                        </button>
-                    </div>
-                </div>
-            ) : (
-                /* ─── WAITING / OFFLINE STATE ─── */
-                <div style={{ textAlign: 'center', padding: 40 }}>
-                    <div style={{ fontSize: 80, marginBottom: 24, opacity: 0.5 }}>✝️</div>
-                    <div style={{
-                        fontSize: 'clamp(24px, 4vw, 48px)',
-                        fontWeight: 800,
-                        color: 'rgba(255,255,255,0.6)',
-                        marginBottom: 12,
-                    }}>
-                        Jesus Loves Everyone
-                    </div>
-                    <div style={{ fontSize: 18, color: 'rgba(255,255,255,0.35)', fontWeight: 500 }}>
-                        Waiting for teacher to start the spotlight...
-                    </div>
-                    <div style={{
-                        marginTop: 40,
-                        display: 'inline-flex', alignItems: 'center', gap: 8,
-                        background: 'rgba(255,255,255,0.05)',
-                        border: '1px solid rgba(255,255,255,0.1)',
-                        borderRadius: 999, padding: '8px 20px',
-                    }}>
-                        <div style={{ width: 8, height: 8, borderRadius: '50%', background: 'rgba(255,255,255,0.3)' }} />
-                        <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: 13, letterSpacing: 2, fontWeight: 600 }}>OFFLINE</span>
-                    </div>
-                </div>
-            )}
+                )}
+            </main>
         </div>
     );
 }

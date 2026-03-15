@@ -1,13 +1,34 @@
-import { View, ActivityIndicator } from 'react-native';
+import { useEffect, useState } from 'react';
+import { ActivityIndicator, View } from 'react-native';
+import { Redirect } from 'expo-router';
+import { onAuthStateChanged, User } from 'firebase/auth';
+import { auth } from '../lib/firebase';
 import { Colors } from '../constants/theme';
 
-// This is the root route ("/"). The _layout.tsx auth guard will immediately
-// redirect to /(auth)/login or /(tabs)/attendance once auth state resolves.
-// This screen just shows a spinner while that happens.
 export default function Index() {
-    return (
-        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: Colors.background }}>
-            <ActivityIndicator size="large" color={Colors.primary} />
-        </View>
-    );
+    const [initializing, setInitializing] = useState(true);
+    const [user, setUser] = useState<User | null>(null);
+
+    useEffect(() => {
+        const unsubscribe = onAuthStateChanged(auth, (nextUser) => {
+            setUser(nextUser);
+            setInitializing(false);
+        });
+
+        return unsubscribe;
+    }, []);
+
+    if (initializing) {
+        return (
+            <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: Colors.background }}>
+                <ActivityIndicator size="large" color={Colors.primary} />
+            </View>
+        );
+    }
+
+    if (user) {
+        return <Redirect href="/(tabs)/attendance" />;
+    }
+
+    return <Redirect href="/(auth)/login" />;
 }

@@ -1,19 +1,168 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function userDocPath() {
+      return /databases/$(database)/documents/users/$(request.auth.uid);
+    }
+
+    function userDocExists() {
+      return isSignedIn() && exists(userDocPath());
+    }
+
+    function isPlatformAdmin() {
+      return userDocExists() && get(userDocPath()).data.globalRole == 'platform_admin';
+    }
+
+    function memberDocPath(churchId) {
+      return /databases/$(database)/documents/churches/$(churchId)/members/$(request.auth.uid);
+    }
+
+    function isChurchMember(churchId) {
+      return isSignedIn()
+        && exists(memberDocPath(churchId))
+        && get(memberDocPath(churchId)).data.status == 'active';
+    }
+
+    function churchRole(churchId) {
+      return get(memberDocPath(churchId)).data.role;
+    }
+
+    function isChurchAdmin(churchId) {
+      return isPlatformAdmin()
+        || (isChurchMember(churchId) && churchRole(churchId) == 'church_admin');
+    }
+
+    function isTeacher(churchId) {
+      return isChurchMember(churchId) && churchRole(churchId) == 'teacher';
+    }
+
+    function isVolunteer(churchId) {
+      return isChurchMember(churchId) && churchRole(churchId) == 'volunteer';
+    }
+
+    function canReadChurch(churchId) {
+      return isPlatformAdmin() || isChurchMember(churchId);
+    }
+
+    function canManageChurch(churchId) {
+      return isChurchAdmin(churchId);
+    }
+
+    function canWriteOperationalData(churchId) {
+      return isChurchAdmin(churchId) || isTeacher(churchId) || isVolunteer(churchId);
+    }
+
+    function isBootstrapChurchCreator(churchId) {
+      return isSignedIn()
+        && exists(/databases/$(database)/documents/churches/$(churchId))
+        && get(/databases/$(database)/documents/churches/$(churchId)).data.createdByUserId == request.auth.uid;
+    }
+
+    match /users/{userId} {
+      allow read: if isSignedIn() && (request.auth.uid == userId || isPlatformAdmin());
+      allow create: if isSignedIn() && request.auth.uid == userId;
+      allow update: if isSignedIn() && (request.auth.uid == userId || isPlatformAdmin());
+      allow delete: if isPlatformAdmin();
+    }
+
+    match /churches/{churchId} {
+      allow read: if canReadChurch(churchId);
+      allow create: if isSignedIn()
+        && request.resource.data.createdByUserId == request.auth.uid
+        && request.resource.data.slug == churchId;
+      allow update, delete: if canManageChurch(churchId) || isPlatformAdmin();
+
+      match /members/{userId} {
+        allow read: if isPlatformAdmin()
+          || (isSignedIn() && userId == request.auth.uid)
+          || canManageChurch(churchId);
+        allow create: if (isBootstrapChurchCreator(churchId)
+            && userId == request.auth.uid
+            && request.resource.data.userId == request.auth.uid
+            && request.resource.data.role == 'church_admin'
+            && request.resource.data.status == 'active')
+          || canManageChurch(churchId)
+          || isPlatformAdmin();
+        allow update, delete: if canManageChurch(churchId) || isPlatformAdmin();
+      }
+
+      match /settings/{docId} {
+        allow read: if canReadChurch(churchId);
+        allow create: if isBootstrapChurchCreator(churchId) || canManageChurch(churchId) || isPlatformAdmin();
+        allow update, delete: if canManageChurch(churchId) || isPlatformAdmin();
+      }
+
+      match /centers/{centerId} {
+        allow read: if canReadChurch(churchId);
+        allow create: if isBootstrapChurchCreator(churchId) || canManageChurch(churchId) || isPlatformAdmin();
+        allow update, delete: if canManageChurch(churchId) || isPlatformAdmin();
+      }
+
+      match /students/{studentId} {
+        allow read: if canReadChurch(churchId);
+        allow create, update: if canWriteOperationalData(churchId);
+        allow delete: if canManageChurch(churchId) || isPlatformAdmin();
+      }
+
+      match /parents/{parentId} {
+        allow read: if canReadChurch(churchId);
+        allow create, update: if canWriteOperationalData(churchId);
+        allow delete: if canManageChurch(churchId) || isPlatformAdmin();
+      }
+
+      match /attendanceSessions/{sessionId} {
+        allow read: if canReadChurch(churchId);
+        allow create, update: if canWriteOperationalData(churchId);
+        allow delete: if canManageChurch(churchId) || isPlatformAdmin();
+      }
+
+      match /attendanceRecords/{recordId} {
+        allow read: if canReadChurch(churchId);
+        allow create, update: if canWriteOperationalData(churchId);
+        allow delete: if canManageChurch(churchId) || isPlatformAdmin();
+      }
+
+      match /announcements/{announcementId} {
+        allow read: if canReadChurch(churchId);
+        allow create, update, delete: if canManageChurch(churchId) || isPlatformAdmin();
+      }
+
+      match /events/{eventId} {
+        allow read: if canReadChurch(churchId);
+        allow create, update, delete: if canManageChurch(churchId) || isPlatformAdmin();
+      }
+
+      match /followUps/{followUpId} {
+        allow read: if canReadChurch(churchId);
+        allow create, update: if canWriteOperationalData(churchId);
+        allow delete: if canManageChurch(churchId) || isPlatformAdmin();
+      }
+
+      match /spotlight/{docId} {
+        allow read: if true;
+        allow create, update, delete: if canWriteOperationalData(churchId) || isPlatformAdmin();
+      }
+    }
+
     match /students/{studentId} {
-      allow read, write: if request.auth != null;
+      allow read, write: if isSignedIn();
     }
+
     match /attendance/{recordId} {
-      allow read, write: if request.auth != null;
+      allow read, write: if isSignedIn();
     }
+
     match /class_sessions/{sessionId} {
-      allow read, write: if request.auth != null;
+      allow read, write: if isSignedIn();
     }
-    // Spotlight: anyone can read (TV/browser), only authenticated can write
+
     match /spotlight/{doc} {
       allow read: if true;
-      allow write: if request.auth != null;
+      allow write: if isSignedIn();
     }
   }
 }

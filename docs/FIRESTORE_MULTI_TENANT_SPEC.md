@@ -37,7 +37,7 @@ Recommended church subcollections:
 ```text
 churches/{churchId}/members/{userId}
 churches/{churchId}/settings/{docId}
-churches/{churchId}/classes/{classId}
+churches/{churchId}/centers/{centerId}
 churches/{churchId}/students/{studentId}
 churches/{churchId}/parents/{parentId}
 churches/{churchId}/attendanceSessions/{sessionId}
@@ -110,7 +110,7 @@ type Membership = {
   userId: string;
   churchId: string;
   role: 'church_admin' | 'teacher' | 'volunteer' | 'viewer';
-  classIds?: string[];
+  centerIds?: string[];
   status: 'invited' | 'active' | 'disabled';
   invitedByUserId?: string;
   invitedEmail?: string;
@@ -121,7 +121,7 @@ type Membership = {
 ```
 
 Notes:
-- `classIds` is required for teachers if class-scoped access is enforced
+- `centerIds` is required for teachers if center-scoped access is enforced
 - `status` should be checked in security rules
 
 ### 3.4 churches/{churchId}/settings/general
@@ -133,7 +133,7 @@ type GeneralSettings = {
   dateFormat?: string;
   attendanceDays?: string[];
   attendanceLockAfterHours?: number;
-  defaultClassIds?: string[];
+  defaultCenterIds?: string[];
   updatedAt: Timestamp;
 };
 ```
@@ -167,7 +167,7 @@ type FeatureSettings = {
   attendance: boolean;
   students: boolean;
   reports: boolean;
-  classes: boolean;
+  centers: boolean;
   parents: boolean;
   announcements: boolean;
   events: boolean;
@@ -179,26 +179,29 @@ type FeatureSettings = {
 };
 ```
 
-### 3.7 churches/{churchId}/classes/{classId}
+### 3.7 churches/{churchId}/centers/{centerId}
 
 ```ts
-type ClassRoom = {
+type Center = {
   id: string;
   name: string;
   code: string;
-  levelOrder?: number;
-  ageRange?: string;
+  hostName?: string;
+  hostPhone?: string;
+  areaName?: string;
+  address?: string;
   teacherIds?: string[];
   volunteerIds?: string[];
-  roomName?: string;
   active: boolean;
+  isChurchLevel?: boolean;
   createdAt: Timestamp;
   updatedAt: Timestamp;
 };
 ```
 
 Notes:
-- `levelOrder` helps sort classes in UI
+- a center may represent a house-based Sunday class unit such as `A1`, `A2`, `A3`
+- `isChurchLevel=true` is used when the church itself conducts the Sunday class
 - `teacherIds` is useful for fast UI filters, but security should still rely on memberships
 
 ### 3.8 churches/{churchId}/students/{studentId}
@@ -210,7 +213,7 @@ type Student = {
   preferredName?: string;
   gender?: 'male' | 'female' | 'other';
   dob?: string;
-  classId: string;
+  centerId?: string;
   parentIds?: string[];
   primaryPhone?: string;
   secondaryPhone?: string;
@@ -246,21 +249,23 @@ type Parent = {
 
 ### 3.10 churches/{churchId}/attendanceSessions/{sessionId}
 
-One document per class session.
+One document per center session or church-level session.
 
 Recommended ID format:
 
-`{date}_{classId}`
+`{date}_{centerOrChurchId}`
 
 Example:
 
-`2026-03-14_class-1`
+`2026-03-14_center-a1`
+`2026-03-14_church`
 
 ```ts
 type AttendanceSession = {
   id: string;
   date: string;
-  classId: string;
+  centerId?: string;
+  scope: 'church' | 'center';
   title?: string;
   summary?: string;
   conductedByUserId: string;
@@ -289,7 +294,7 @@ type AttendanceRecord = {
   id: string;
   sessionId: string;
   studentId: string;
-  classId: string;
+  centerId?: string;
   date: string;
   status: 'present' | 'absent' | 'late' | 'excused';
   note?: string;
@@ -305,8 +310,8 @@ type Announcement = {
   id: string;
   title: string;
   body: string;
-  audience: 'all' | 'teachers' | 'parents' | 'class';
-  classIds?: string[];
+  audience: 'all' | 'teachers' | 'parents' | 'center';
+  centerIds?: string[];
   active: boolean;
   publishedAt?: Timestamp;
   createdByUserId: string;
@@ -326,7 +331,7 @@ type Event = {
   startAt: Timestamp;
   endAt?: Timestamp;
   location?: string;
-  classIds?: string[];
+  centerIds?: string[];
   registrationRequired?: boolean;
   active: boolean;
   createdAt: Timestamp;
@@ -340,7 +345,7 @@ type Event = {
 type FollowUp = {
   id: string;
   studentId: string;
-  classId?: string;
+  centerId?: string;
   reason: 'absence' | 'birthday' | 'new_joiner' | 'pastoral_note' | 'other';
   status: 'open' | 'in_progress' | 'completed';
   assignedToUserId?: string;
@@ -374,19 +379,24 @@ type Spotlight = {
 Inputs:
 - `churchId`
 - selected `date`
-- selected `classId`
+- selected `centerId` or church-level mode
 
 Queries:
-- `churches/{churchId}/students where classId == {classId} and active == true`
-- `churches/{churchId}/attendanceSessions/{date}_{classId}`
-- `churches/{churchId}/attendanceRecords where sessionId == {date}_{classId}`
+- center mode:
+  - `churches/{churchId}/students where centerId == {centerId} and active == true`
+  - `churches/{churchId}/attendanceSessions/{date}_{centerId}`
+  - `churches/{churchId}/attendanceRecords where sessionId == {date}_{centerId}`
+- church mode:
+  - `churches/{churchId}/students` with no `centerId`
+  - `churches/{churchId}/attendanceSessions/{date}_church`
+  - `churches/{churchId}/attendanceRecords where sessionId == {date}_church`
 
 ### Dashboard
 
 Inputs:
 - `churchId`
 - role
-- classIds if teacher
+- centerIds if teacher
 
 Queries:
 - `students`
@@ -395,7 +405,7 @@ Queries:
 - `followUps`
 
 Church admin sees all church data.
-Teacher sees only assigned classes.
+Teacher sees only assigned centers.
 
 ### Student details
 
@@ -412,18 +422,18 @@ These will likely be needed in Firestore:
 
 ### students
 
-- `classId ASC, active ASC, fullName ASC`
+- `centerId ASC, active ASC, fullName ASC`
 
 ### attendanceRecords
 
-- `date DESC, classId ASC`
+- `date DESC, centerId ASC`
 - `sessionId ASC, status ASC`
 - `studentId ASC, date DESC`
-- `classId ASC, date DESC`
+- `centerId ASC, date DESC`
 
 ### attendanceSessions
 
-- `date DESC, classId ASC`
+- `date DESC, centerId ASC`
 
 ### followUps
 
@@ -458,9 +468,9 @@ These rules should hold across the app:
 Use stable, readable IDs where helpful:
 
 - `churchId`: generated ID or slug-based ID
-- `classId`: generated ID
+- `centerId`: generated ID
 - `studentId`: generated ID
-- `attendanceSessionId`: `{date}_{classId}`
+- `attendanceSessionId`: `{date}_{centerOrChurchId}`
 - `attendanceRecordId`: `{sessionId}_{studentId}`
 - membership ID: `userId`
 
@@ -512,14 +522,14 @@ Field mapping from current `Student`:
 
 ```text
 name -> fullName
-class -> classId or mapped class reference
+class -> centerId or mapped center reference
 phone -> primaryPhone
 dob -> dob
 photoUrl -> photoUrl
 ```
 
 Important note:
-Current class values like `LKG`, `1st`, `2nd` should become real class documents first.
+Current values like `A1`, `A2`, `A3` should become center documents first.
 
 ---
 
@@ -532,24 +542,14 @@ When onboarding a new church, create:
 3. `churches/{churchId}/settings/branding`
 4. `churches/{churchId}/settings/features`
 5. `churches/{churchId}/members/{adminUserId}`
-6. default classes
+6. default centers if needed
 
-Suggested default classes:
+Suggested initial centers:
 
-- `LKG`
-- `UKG`
-- `1st`
-- `2nd`
-- `3rd`
-- `4th`
-- `5th`
-- `6th`
-- `7th`
-- `8th`
-- `9th`
-- `10th`
-- `11th`
-- `12th`
+- `church`
+- `A1`
+- `A2`
+- `A3`
 
 ---
 

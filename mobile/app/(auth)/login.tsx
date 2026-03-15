@@ -10,14 +10,57 @@ import {
     Alert,
     ActivityIndicator,
     ScrollView,
+    Image,
 } from 'react-native';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '../../lib/firebase';
-import { Colors, Radius, Shadows } from '../../constants/theme';
+import { Colors, Radius, Shadows, Spacing } from '../../constants/theme';
 import { StatusBar } from 'expo-status-bar';
 import { Feather } from '@expo/vector-icons';
+import { useChurchBranding } from '../../hooks/useChurchBranding';
+import { getBrandPalette } from '../../lib/branding';
+
+function InputField({
+    label,
+    icon,
+    value,
+    onChangeText,
+    placeholder,
+    secureTextEntry = false,
+    keyboardType = 'default',
+}: {
+    label: string;
+    icon: keyof typeof Feather.glyphMap;
+    value: string;
+    onChangeText: (text: string) => void;
+    placeholder: string;
+    secureTextEntry?: boolean;
+    keyboardType?: 'default' | 'email-address';
+}) {
+    return (
+        <View style={styles.inputGroup}>
+            <Text style={styles.label}>{label}</Text>
+            <View style={styles.inputShell}>
+                <Feather name={icon} size={18} color={Colors.textSecondary} style={styles.inputIcon} />
+                <TextInput
+                    style={styles.input}
+                    placeholder={placeholder}
+                    placeholderTextColor={Colors.textMuted}
+                    value={value}
+                    onChangeText={onChangeText}
+                    keyboardType={keyboardType}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    secureTextEntry={secureTextEntry}
+                />
+            </View>
+        </View>
+    );
+}
 
 export default function LoginScreen() {
+    const { branding } = useChurchBranding();
+    const palette = getBrandPalette(branding);
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(false);
@@ -31,7 +74,7 @@ export default function LoginScreen() {
         try {
             await signInWithEmailAndPassword(auth, email.trim(), password);
         } catch (err: any) {
-            Alert.alert('Login Failed', err.message);
+            Alert.alert('Login failed', err.message);
         } finally {
             setLoading(false);
         }
@@ -44,70 +87,91 @@ export default function LoginScreen() {
         >
             <StatusBar style="light" />
             <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
-                {/* Header Background shape */}
-                <View style={styles.headerBackgroundShape} />
-
-                {/* Header Context */}
-                <View style={styles.header}>
-                    <View style={styles.iconContainer}>
-                        <Feather name="book-open" size={40} color={Colors.white} />
+                <View style={[styles.hero, { backgroundColor: palette.primaryDark }]}>
+                    <View style={[styles.heroOrbLarge, { backgroundColor: palette.primarySoft }]} />
+                    <View style={[styles.heroOrbSmall, { backgroundColor: palette.accentSoft }]} />
+                    <View style={[styles.heroOrbBottom, { backgroundColor: 'rgba(255,255,255,0.08)' }]} />
+                    <View style={styles.logoWrap}>
+                        <View style={styles.brandTopRow}>
+                            <View style={styles.logoBadge}>
+                                {branding?.logoUrl ? (
+                                    <Image source={{ uri: branding.logoUrl }} style={styles.brandLogo} />
+                                ) : (
+                                    <Feather name="book-open" size={32} color={Colors.white} />
+                                )}
+                            </View>
+                            <View style={styles.brandStatusPill}>
+                                <View style={[styles.brandStatusDot, { backgroundColor: palette.accent }]} />
+                                <Text style={styles.brandStatusText}>White-label ready</Text>
+                            </View>
+                        </View>
+                        <View style={styles.logoTextWrap}>
+                            <Text style={styles.eyebrow}>{branding?.shortName || 'Sunday School Platform'}</Text>
+                            <Text style={styles.title}>{branding?.welcomeTitle || 'Welcome back'}</Text>
+                            <Text style={styles.subtitle}>Track attendance with a calm, simple teacher workflow.</Text>
+                        </View>
+                        <View style={styles.heroFeatureRow}>
+                            <View style={styles.heroFeatureCard}>
+                                <Text style={styles.heroFeatureLabel}>Church</Text>
+                                <Text style={styles.heroFeatureValue}>{branding?.churchDisplayName || branding?.shortName || 'Workspace'}</Text>
+                            </View>
+                            <View style={styles.heroFeatureCard}>
+                                <Text style={styles.heroFeatureLabel}>Experience</Text>
+                                <Text style={styles.heroFeatureValue}>Branded mobile</Text>
+                            </View>
+                        </View>
                     </View>
-                    <Text style={styles.appTitle}>Sunday School</Text>
-                    <Text style={styles.appSubtitle}>Attendance Manager</Text>
                 </View>
 
-                {/* Login Card */}
                 <View style={[styles.card, Shadows.lg]}>
-                    <Text style={styles.cardTitle}>God Bless You!</Text>
-                    <Text style={styles.cardSubtitle}>Sign in to your teacher portal.</Text>
-
-                    <View style={styles.inputGroup}>
-                        <Text style={styles.label}>Email Address</Text>
-                        <View style={styles.inputWrapper}>
-                            <Feather name="mail" size={18} color={Colors.textSecondary} style={styles.inputIcon} />
-                            <TextInput
-                                style={styles.input}
-                                placeholder="teacher@church.com"
-                                placeholderTextColor={Colors.textSecondary}
-                                value={email}
-                                onChangeText={setEmail}
-                                keyboardType="email-address"
-                                autoCapitalize="none"
-                                autoCorrect={false}
-                            />
-                        </View>
+                    <View style={styles.cardHeader}>
+                        <Text style={styles.cardTitle}>Teacher Sign In</Text>
+                        <Text style={styles.cardSubtitle}>Use your church account to continue.</Text>
                     </View>
 
-                    <View style={styles.inputGroup}>
-                        <Text style={styles.label}>Password</Text>
-                        <View style={styles.inputWrapper}>
-                            <Feather name="lock" size={18} color={Colors.textSecondary} style={styles.inputIcon} />
-                            <TextInput
-                                style={styles.input}
-                                placeholder="••••••••"
-                                placeholderTextColor={Colors.textSecondary}
-                                value={password}
-                                onChangeText={setPassword}
-                                secureTextEntry
-                            />
-                        </View>
+                    <InputField
+                        label="Email Address"
+                        icon="mail"
+                        value={email}
+                        onChangeText={setEmail}
+                        placeholder="teacher@church.com"
+                        keyboardType="email-address"
+                    />
+
+                    <InputField
+                        label="Password"
+                        icon="lock"
+                        value={password}
+                        onChangeText={setPassword}
+                        placeholder="Enter your password"
+                        secureTextEntry
+                    />
+
+                    <View style={styles.noteRow}>
+                        <Feather name="shield" size={15} color={palette.primary} />
+                        <Text style={styles.noteText}>Secure access for teachers and volunteers</Text>
                     </View>
 
                     <TouchableOpacity
-                        style={[styles.button, loading && styles.buttonDisabled, Shadows.sm]}
+                        style={[styles.button, { backgroundColor: palette.primary }, loading && styles.buttonDisabled, Shadows.md]}
                         onPress={handleLogin}
                         disabled={loading}
-                        activeOpacity={0.85}
+                        activeOpacity={0.88}
                     >
                         {loading ? (
                             <ActivityIndicator color={Colors.white} size="small" />
                         ) : (
-                            <Text style={styles.buttonText}>Sign In</Text>
+                            <>
+                                <Text style={styles.buttonText}>Sign In</Text>
+                                <Feather name="arrow-right" size={18} color={Colors.white} />
+                            </>
                         )}
                     </TouchableOpacity>
                 </View>
 
-                <Text style={styles.footer}>🙏 Serving with faith & love</Text>
+                <View style={styles.footer}>
+                    <Text style={styles.footerText}>Built for {branding?.churchDisplayName || 'churches'}, teachers, and Sunday class leaders.</Text>
+                </View>
             </ScrollView>
         </KeyboardAvoidingView>
     );
@@ -115,43 +179,161 @@ export default function LoginScreen() {
 
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: Colors.background },
-    scroll: { flexGrow: 1, justifyContent: 'center', padding: 24 },
-    headerBackgroundShape: {
+    scroll: { flexGrow: 1, paddingBottom: Spacing.xl },
+    hero: {
+        backgroundColor: Colors.primaryDark,
+        paddingHorizontal: Spacing.lg,
+        paddingTop: 80,
+        paddingBottom: 78,
+        borderBottomLeftRadius: 42,
+        borderBottomRightRadius: 42,
+        overflow: 'hidden',
+    },
+    heroOrbLarge: {
         position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        height: 380,
-        backgroundColor: Colors.primary,
-        borderBottomLeftRadius: 40,
-        borderBottomRightRadius: 40,
+        width: 220,
+        height: 220,
+        borderRadius: 110,
+        backgroundColor: 'rgba(255,255,255,0.08)',
+        top: -40,
+        right: -70,
     },
-    header: { alignItems: 'center', marginBottom: 40, marginTop: 40 },
-    iconContainer: {
-        width: 80,
-        height: 80,
-        borderRadius: 40,
-        backgroundColor: 'rgba(255,255,255,0.15)',
-        justifyContent: 'center',
+    heroOrbSmall: {
+        position: 'absolute',
+        width: 140,
+        height: 140,
+        borderRadius: 70,
+        backgroundColor: 'rgba(229,154,47,0.22)',
+        bottom: -20,
+        left: -30,
+    },
+    heroOrbBottom: {
+        position: 'absolute',
+        width: 200,
+        height: 200,
+        borderRadius: 100,
+        bottom: -90,
+        right: 50,
+    },
+    logoWrap: { gap: 18 },
+    brandTopRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
         alignItems: 'center',
-        marginBottom: 16,
     },
-    appTitle: { fontSize: 32, fontWeight: '800', color: Colors.white, letterSpacing: 0.5 },
-    appSubtitle: { fontSize: 16, color: 'rgba(255,255,255,0.85)', marginTop: 4, fontWeight: '500' },
-    card: {
-        backgroundColor: Colors.surface,
-        borderRadius: Radius.xl,
-        padding: 32,
-        marginHorizontal: 8,
+    logoBadge: {
+        width: 68,
+        height: 68,
+        borderRadius: 22,
+        backgroundColor: 'rgba(255,255,255,0.14)',
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.12)',
     },
-    cardTitle: { fontSize: 24, fontWeight: '700', color: Colors.text, marginBottom: 6 },
-    cardSubtitle: { fontSize: 15, color: Colors.textSecondary, marginBottom: 32 },
-    inputGroup: { marginBottom: 20 },
-    label: { fontSize: 13, fontWeight: '700', color: Colors.textSecondary, marginBottom: 8, letterSpacing: 0.5, textTransform: 'uppercase' },
-    inputWrapper: {
+    brandStatusPill: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: Colors.background,
+        gap: 8,
+        backgroundColor: 'rgba(255,255,255,0.12)',
+        borderRadius: Radius.pill,
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+    },
+    brandStatusDot: {
+        width: 9,
+        height: 9,
+        borderRadius: 5,
+    },
+    brandStatusText: {
+        color: Colors.white,
+        fontSize: 12,
+        fontWeight: '700',
+    },
+    brandLogo: {
+        width: 52,
+        height: 52,
+        borderRadius: 18,
+        backgroundColor: 'rgba(255,255,255,0.12)',
+    },
+    logoTextWrap: { gap: 6 },
+    eyebrow: {
+        color: 'rgba(255,255,255,0.72)',
+        fontSize: 13,
+        fontWeight: '700',
+        letterSpacing: 1,
+        textTransform: 'uppercase',
+    },
+    title: {
+        color: Colors.white,
+        fontSize: 34,
+        fontWeight: '800',
+        letterSpacing: -0.8,
+    },
+    subtitle: {
+        color: 'rgba(255,255,255,0.86)',
+        fontSize: 15,
+        lineHeight: 22,
+        maxWidth: 290,
+    },
+    heroFeatureRow: {
+        flexDirection: 'row',
+        gap: 10,
+        marginTop: 8,
+    },
+    heroFeatureCard: {
+        flex: 1,
+        backgroundColor: 'rgba(255,255,255,0.12)',
+        borderRadius: Radius.lg,
+        paddingHorizontal: 14,
+        paddingVertical: 12,
+    },
+    heroFeatureLabel: {
+        color: 'rgba(255,255,255,0.68)',
+        fontSize: 11,
+        fontWeight: '700',
+        textTransform: 'uppercase',
+        letterSpacing: 0.8,
+    },
+    heroFeatureValue: {
+        color: Colors.white,
+        fontSize: 14,
+        fontWeight: '800',
+        marginTop: 6,
+    },
+    card: {
+        marginTop: -44,
+        marginHorizontal: Spacing.lg,
+        backgroundColor: Colors.surface,
+        borderRadius: Radius.xl,
+        padding: Spacing.lg,
+        borderWidth: 1,
+        borderColor: Colors.border,
+    },
+    cardHeader: { marginBottom: Spacing.lg, gap: 4 },
+    cardTitle: {
+        fontSize: 24,
+        fontWeight: '800',
+        color: Colors.text,
+    },
+    cardSubtitle: {
+        fontSize: 14,
+        color: Colors.textSecondary,
+        lineHeight: 20,
+    },
+    inputGroup: { marginBottom: Spacing.md },
+    label: {
+        fontSize: 12,
+        fontWeight: '700',
+        color: Colors.textSecondary,
+        marginBottom: 8,
+        letterSpacing: 0.8,
+        textTransform: 'uppercase',
+    },
+    inputShell: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: Colors.surfaceAlt,
         borderWidth: 1,
         borderColor: Colors.border,
         borderRadius: Radius.md,
@@ -160,19 +342,52 @@ const styles = StyleSheet.create({
     inputIcon: { marginRight: 10 },
     input: {
         flex: 1,
-        paddingVertical: 16,
-        fontSize: 16,
+        paddingVertical: 17,
         color: Colors.text,
+        fontSize: 16,
+    },
+    noteRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+        backgroundColor: Colors.primarySoft,
+        paddingHorizontal: 12,
+        paddingVertical: 10,
+        borderRadius: Radius.md,
+        marginBottom: Spacing.lg,
+    },
+    noteText: {
+        color: Colors.primaryDark,
+        fontSize: 13,
+        fontWeight: '600',
     },
     button: {
-        backgroundColor: Colors.primary,
+        minHeight: 58,
         borderRadius: Radius.md,
-        paddingVertical: 18,
+        backgroundColor: Colors.primary,
         alignItems: 'center',
-        marginTop: 12,
+        justifyContent: 'center',
+        flexDirection: 'row',
+        gap: 10,
     },
-    buttonDisabled: { backgroundColor: Colors.primaryLight },
-    buttonText: { color: Colors.white, fontSize: 16, fontWeight: '700', letterSpacing: 0.5 },
-    footer: { textAlign: 'center', color: Colors.textSecondary, marginTop: 40, fontSize: 13, fontWeight: '500' },
+    buttonDisabled: {
+        backgroundColor: Colors.primaryLight,
+    },
+    buttonText: {
+        color: Colors.white,
+        fontSize: 16,
+        fontWeight: '800',
+        letterSpacing: 0.3,
+    },
+    footer: {
+        paddingHorizontal: Spacing.xl,
+        paddingTop: 22,
+        alignItems: 'center',
+    },
+    footerText: {
+        textAlign: 'center',
+        color: Colors.textMuted,
+        fontSize: 13,
+        lineHeight: 18,
+    },
 });
-

@@ -1,102 +1,156 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
     View,
     Text,
-    FlatList,
     Image,
+    Animated,
     TouchableOpacity,
     StyleSheet,
     Alert,
     ActivityIndicator,
     SafeAreaView,
+    TextInput,
+    Platform,
+    Modal,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { signOut } from 'firebase/auth';
-import { auth } from '../../lib/firebase';
-import { subscribeStudents, saveAttendance, Student } from '../../lib/api';
-import { Colors, Radius, Shadows } from '../../constants/theme';
 import { StatusBar } from 'expo-status-bar';
 import { Feather } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { TextInput, Platform } from 'react-native';
+import { auth } from '../../lib/firebase';
+import { subscribeStudents, saveAttendance, Student, getStudentCenterLabel } from '../../lib/api';
+import { Colors, Radius, Shadows, Spacing } from '../../constants/theme';
 import { useChurch } from '../../context/ChurchContext';
+import { useChurchBranding } from '../../hooks/useChurchBranding';
+import { getBrandPalette } from '../../lib/branding';
 
 type AttendanceMap = Record<string, 'present' | 'absent'>;
 
-// Helper to check if student has a birthday in the next 7 days
+const HERO_MAX_HEIGHT = 340;
+const HERO_MIN_HEIGHT = 124;
+
 function isBirthdayComingUp(dobStr?: string): boolean {
     if (!dobStr) return false;
     const parts = dobStr.split('-');
     if (parts.length !== 3) return false;
 
-    // Using UTC to avoid timezone drift matching days
     const birthMonth = parseInt(parts[1], 10);
     const birthDay = parseInt(parts[2], 10);
-
     const today = new Date();
 
-    for (let i = 0; i < 7; i++) {
+    for (let i = 0; i < 7; i += 1) {
         const checkDate = new Date(today);
         checkDate.setDate(today.getDate() + i);
         if (checkDate.getMonth() + 1 === birthMonth && checkDate.getDate() === birthDay) {
             return true;
         }
     }
+
     return false;
+}
+
+function StatCard({
+    label,
+    value,
+    tone = 'neutral',
+}: {
+    label: string;
+    value: number;
+    tone?: 'neutral' | 'present' | 'absent';
+}) {
+    const valueStyle = tone === 'present'
+        ? styles.statValuePresent
+        : tone === 'absent'
+            ? styles.statValueAbsent
+            : styles.statValue;
+
+    return (
+        <View style={[styles.statCard, Shadows.sm]}>
+            <Text style={styles.statLabel}>{label}</Text>
+            <Text style={valueStyle}>{value}</Text>
+        </View>
+    );
 }
 
 export default function AttendanceScreen() {
     const router = useRouter();
-    const { activeChurchId } = useChurch();
+    const { activeChurch, activeChurchId, multiTenantEnabled } = useChurch();
+    const { branding } = useChurchBranding(activeChurchId);
+    const palette = getBrandPalette(branding);
     const [students, setStudents] = useState<Student[]>([]);
     const [attendance, setAttendance] = useState<AttendanceMap>({});
     const [summary, setSummary] = useState('');
     const [dateObj, setDateObj] = useState(new Date());
+    const [draftDateObj, setDraftDateObj] = useState(new Date());
     const [showPicker, setShowPicker] = useState(false);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
+    const [feedback, setFeedback] = useState<string | null>(null);
+    const scrollY = useRef(new Animated.Value(0)).current;
 
     const selectedDateString = dateObj.toISOString().split('T')[0];
     const isSunday = dateObj.getDay() === 0;
 
-    // 1. Subscribe to students
+    const heroHeight = scrollY.interpolate({
+        inputRange: [0, 220],
+        outputRange: [HERO_MAX_HEIGHT, HERO_MIN_HEIGHT],
+        extrapolate: 'clamp',
+    });
+    const expandedOpacity = scrollY.interpolate({
+        inputRange: [0, 110, 190],
+        outputRange: [1, 0.85, 0],
+        extrapolate: 'clamp',
+    });
+    const expandedTranslateY = scrollY.interpolate({
+        inputRange: [0, 220],
+        outputRange: [0, -26],
+        extrapolate: 'clamp',
+    });
+    const compactOpacity = scrollY.interpolate({
+        inputRange: [90, 170, 220],
+        outputRange: [0, 0.35, 1],
+        extrapolate: 'clamp',
+    });
+    const floatingTranslateY = scrollY.interpolate({
+        inputRange: [0, 220],
+        outputRange: [0, -16],
+        extrapolate: 'clamp',
+    });
+
     useEffect(() => {
         const unsubscribe = subscribeStudents((data) => {
             setStudents(data);
         }, activeChurchId ?? undefined);
+
         return unsubscribe;
     }, [activeChurchId]);
 
-    // 2. Fetch attendance & summary for picked date
     useEffect(() => {
         const fetchDayData = async () => {
             setLoading(true);
-            try {
-                // Wait for the imports to work, oh I didn't import `getAttendanceByDate` and `getClassSummary` and `saveClassSummary`.
-                // I need to import them at the top. I'll fix that in a later chunk or rely on the previous one.
-                // Wait! I need to replace the import. 
-                // Let's do a dynamic import or ensure `api.ts` exports them.
-                const { getAttendanceByDate, getClassSummary } = await import('../../lib/api');
 
-                const [records, summ] = await Promise.all([
+            try {
+                const { getAttendanceByDate, getClassSummary } = await import('../../lib/api');
+                const [records, sessionSummary] = await Promise.all([
                     getAttendanceByDate(selectedDateString, activeChurchId ?? undefined),
-                    getClassSummary(selectedDateString, activeChurchId ?? undefined)
+                    getClassSummary(selectedDateString, activeChurchId ?? undefined),
                 ]);
 
-                setAttendance(prev => {
-                    const newMap: AttendanceMap = {};
-                    records.forEach(r => {
-                        newMap[r.studentId] = r.status;
-                    });
-                    return newMap;
+                const nextMap: AttendanceMap = {};
+                records.forEach((record) => {
+                    nextMap[record.studentId] = record.status;
                 });
-                setSummary(summ);
+
+                setAttendance(nextMap);
+                setSummary(sessionSummary);
             } catch (err) {
                 console.error(err);
             } finally {
                 setLoading(false);
             }
         };
+
         fetchDayData();
     }, [selectedDateString, activeChurchId]);
 
@@ -107,11 +161,29 @@ export default function AttendanceScreen() {
         }));
     }, []);
 
-    const onChangeDate = (event: any, selected?: Date) => {
-        if (Platform.OS === 'android') setShowPicker(false);
-        if (selected) {
-            setDateObj(selected);
+    const onChangeDate = (_event: any, selected?: Date) => {
+        if (Platform.OS === 'android') {
+            setShowPicker(false);
+            if (selected) {
+                setDateObj(selected);
+                setDraftDateObj(selected);
+            }
+            return;
         }
+
+        if (selected) setDraftDateObj(selected);
+    };
+
+    const openDatePicker = () => {
+        setDraftDateObj(dateObj);
+        setShowPicker(true);
+    };
+
+    const closeDatePicker = () => setShowPicker(false);
+
+    const confirmDatePicker = () => {
+        setDateObj(draftDateObj);
+        setShowPicker(false);
     };
 
     const handleSave = async () => {
@@ -119,17 +191,20 @@ export default function AttendanceScreen() {
             Alert.alert('Not Allowed', 'Attendance can only be recorded on Sundays.');
             return;
         }
+
         setSaving(true);
         try {
             const { saveClassSummary } = await import('../../lib/api');
-            const records = students.map((s) => ({
-                studentId: s.id,
+            const records = students.map((student) => ({
+                studentId: student.id,
                 date: selectedDateString,
-                status: attendance[s.id] ?? 'absent',
+                status: attendance[student.id] ?? 'absent',
             }));
+
             await saveAttendance(records, activeChurchId ?? undefined);
             await saveClassSummary(selectedDateString, summary.trim(), activeChurchId ?? undefined);
-            Alert.alert('✅ Saved successfully', 'Attendance and summary stored securely.');
+            setFeedback('Attendance and lesson summary were saved successfully.');
+            setTimeout(() => setFeedback(null), 2600);
         } catch {
             Alert.alert('Error', 'Failed to save attendance. Please try again.');
         } finally {
@@ -144,7 +219,10 @@ export default function AttendanceScreen() {
         ]);
     };
 
-    const presentCount = Object.values(attendance).filter((v) => v === 'present').length;
+    const presentCount = useMemo(
+        () => Object.values(attendance).filter((value) => value === 'present').length,
+        [attendance]
+    );
     const absentCount = students.length - presentCount;
 
     const renderItem = ({ item }: { item: Student }) => {
@@ -154,57 +232,66 @@ export default function AttendanceScreen() {
         return (
             <TouchableOpacity
                 onPress={() => router.push({ pathname: '/spotlight', params: { studentId: item.id, studentName: item.name, churchId: activeChurchId ?? '' } } as any)}
-                activeOpacity={0.85}
+                activeOpacity={0.92}
             >
-                <View style={[styles.row, Shadows.sm, hasBirthday && styles.birthdayRow]}>
-                    {/* Avatar */}
-                    {item.photoUrl ? (
-                        <Image source={{ uri: item.photoUrl }} style={styles.avatarPhoto} />
-                    ) : (
-                        <View style={styles.avatarContainer}>
-                            <Text style={styles.avatarText}>{item.name.charAt(0).toUpperCase()}</Text>
-                        </View>
-                    )}
-
-                    {/* Info */}
-                    <View style={styles.studentInfo}>
-                        <Text style={[styles.studentName, hasBirthday && styles.birthdayText]} numberOfLines={1}>
-                            {item.name} {hasBirthday && '🎂'}
-                        </Text>
-                        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                            <View style={styles.classBadge}>
-                                <Text style={styles.classBadgeText}>{item.class}</Text>
+                <View style={[styles.studentCard, Shadows.sm, hasBirthday && styles.studentCardBirthday]}>
+                    <View style={styles.studentIdentity}>
+                        {item.photoUrl ? (
+                            <Image source={{ uri: item.photoUrl }} style={styles.avatarPhoto} />
+                        ) : (
+                            <View style={styles.avatarFallback}>
+                                <Text style={styles.avatarText}>{item.name.charAt(0).toUpperCase()}</Text>
                             </View>
-                            {hasBirthday && (
-                                <Text style={styles.birthdayHighlightText}> Birthday Week!</Text>
-                            )}
+                        )}
+
+                        <View style={styles.studentMeta}>
+                            <View style={styles.nameRow}>
+                                <Text style={styles.studentName} numberOfLines={1}>{item.name}</Text>
+                                {hasBirthday ? (
+                                    <View style={styles.birthdayPill}>
+                                        <Text style={styles.birthdayPillText}>Birthday</Text>
+                                    </View>
+                                ) : null}
+                            </View>
+
+                            <View style={styles.metaRow}>
+                                <View style={styles.centerPill}>
+                                    <Text style={styles.centerPillText}>{getStudentCenterLabel(item)}</Text>
+                                </View>
+
+                                <TouchableOpacity
+                                    style={styles.spotlightHint}
+                                    onPress={() => router.push({ pathname: '/spotlight', params: { studentId: item.id, studentName: item.name, churchId: activeChurchId ?? '' } } as any)}
+                                >
+                                    <Feather name="camera" size={12} color={Colors.primary} />
+                                    <Text style={styles.spotlightHintText}>Spotlight</Text>
+                                </TouchableOpacity>
+                            </View>
                         </View>
                     </View>
 
-                    {/* ❤️ hint */}
-                    <View style={styles.jesusHint}>
-                        <Text style={{ fontSize: 20 }}>❤️</Text>
+                    <View style={styles.actionsRow}>
+                        <TouchableOpacity
+                            style={[
+                                styles.statusButton,
+                                isPresent ? styles.statusButtonPresent : styles.statusButtonAbsent,
+                            ]}
+                            onPress={(e) => {
+                                e.stopPropagation?.();
+                                toggle(item.id);
+                            }}
+                            activeOpacity={0.88}
+                        >
+                            <Feather
+                                name={isPresent ? 'check-circle' : 'x-circle'}
+                                size={17}
+                                color={isPresent ? Colors.present : Colors.absent}
+                            />
+                            <Text style={[styles.statusText, isPresent ? styles.statusTextPresent : styles.statusTextAbsent]}>
+                                {isPresent ? 'Present' : 'Absent'}
+                            </Text>
+                        </TouchableOpacity>
                     </View>
-
-                    {/* Toggle */}
-                    <TouchableOpacity
-                        style={[
-                            styles.toggleBtn,
-                            isPresent ? styles.presentBtn : styles.absentBtn
-                        ]}
-                        onPress={(e) => { e.stopPropagation?.(); toggle(item.id); }}
-                        activeOpacity={0.8}
-                    >
-                        <Feather
-                            name={isPresent ? "check-circle" : "x-circle"}
-                            size={16}
-                            color={isPresent ? Colors.present : Colors.absent}
-                            style={{ marginRight: 6 }}
-                        />
-                        <Text style={[styles.toggleText, isPresent ? styles.presentText : styles.absentText]}>
-                            {isPresent ? 'Present' : 'Absent'}
-                        </Text>
-                    </TouchableOpacity>
                 </View>
             </TouchableOpacity>
         );
@@ -214,334 +301,914 @@ export default function AttendanceScreen() {
         <View style={styles.container}>
             <StatusBar style="light" />
 
-            {/* Header Background shape */}
-            <View style={styles.headerBackgroundShape} />
+            <Animated.View style={[styles.hero, { backgroundColor: palette.primaryDark, height: heroHeight }]}>
+                <View style={[styles.heroGlow, { backgroundColor: palette.accentSoft }]} />
+                <View style={[styles.heroGlowSecondary, { backgroundColor: palette.primarySoft }]} />
 
-            <SafeAreaView style={styles.safeArea}>
-                {/* Elegant Header */}
-                <View style={styles.header}>
-                    <View>
-                        <Text style={styles.headerGreeting}>Good Morning,</Text>
-                        <Text style={styles.headerTitle}>Sunday School</Text>
-                        <TouchableOpacity
-                            style={styles.dateBadge}
-                            activeOpacity={0.8}
-                            onPress={() => setShowPicker(true)}
-                        >
-                            <Feather name="calendar" size={14} color={Colors.white} style={{ marginRight: 6 }} />
-                            <Text style={styles.headerDate}>{selectedDateString}</Text>
-                            <Feather name="chevron-down" size={14} color={Colors.white} style={{ marginLeft: 6 }} />
+                <SafeAreaView style={styles.heroSafeArea}>
+                    <Animated.View style={[styles.heroCompactBar, { opacity: compactOpacity }]}>
+                        <View style={styles.heroCompactIdentity}>
+                            {branding?.logoUrl ? (
+                                <Image source={{ uri: branding.logoUrl }} style={styles.heroCompactLogo} />
+                            ) : (
+                                <View style={[styles.heroCompactLogoFallback, { backgroundColor: palette.primarySoft }]}>
+                                    <Feather name="home" size={15} color={Colors.white} />
+                                </View>
+                            )}
+
+                            <View>
+                                <Text style={styles.heroCompactTitle}>Sunday Register</Text>
+                                <Text style={styles.heroCompactSubtitle}>
+                                    {branding?.churchDisplayName || activeChurch?.name || 'Church Workspace'}
+                                </Text>
+                            </View>
+                        </View>
+
+                        <TouchableOpacity style={[styles.heroCompactAction, { backgroundColor: palette.primarySoft }]} onPress={handleLogout} activeOpacity={0.82}>
+                            <Feather name="log-out" size={17} color={Colors.white} />
                         </TouchableOpacity>
-                    </View>
-                    <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout} activeOpacity={0.7}>
-                        <Feather name="log-out" size={20} color={Colors.white} />
+                    </Animated.View>
+
+                    <Animated.View style={[styles.heroExpanded, { opacity: expandedOpacity, transform: [{ translateY: expandedTranslateY }] }]}>
+                        <View style={styles.heroTopRow}>
+                            <View style={styles.heroCopy}>
+                                <Text style={styles.heroEyebrow}>Attendance</Text>
+                                <Text style={styles.heroTitle}>Sunday Class Register</Text>
+                                <Text style={styles.heroSubtitle}>
+                                    {branding?.welcomeSubtitle || 'Mark attendance, note the lesson, and celebrate every center beautifully.'}
+                                </Text>
+
+                                {(multiTenantEnabled || activeChurch || branding?.churchDisplayName) ? (
+                                    <View style={styles.churchPill}>
+                                        {branding?.logoUrl ? (
+                                            <Image source={{ uri: branding.logoUrl }} style={styles.churchLogo} />
+                                        ) : (
+                                            <Feather name="home" size={14} color={Colors.white} />
+                                        )}
+                                        <Text style={styles.churchPillText}>
+                                            {branding?.churchDisplayName || activeChurch?.name || 'Church Workspace'}
+                                        </Text>
+                                    </View>
+                                ) : null}
+
+                                <View style={styles.heroSignalRow}>
+                                    <View style={styles.heroSignalCard}>
+                                        <Text style={styles.heroSignalLabel}>Sunday</Text>
+                                        <Text style={styles.heroSignalValue}>{isSunday ? 'Open' : 'Standby'}</Text>
+                                    </View>
+                                    <View style={[styles.heroSignalCard, styles.heroSignalCardMuted]}>
+                                        <Text style={styles.heroSignalLabel}>Roster</Text>
+                                        <Text style={styles.heroSignalValue}>{students.length}</Text>
+                                    </View>
+                                </View>
+                            </View>
+
+                            <TouchableOpacity style={[styles.heroIconButton, { backgroundColor: palette.primarySoft }]} onPress={handleLogout} activeOpacity={0.82}>
+                                <Feather name="log-out" size={20} color={Colors.white} />
+                            </TouchableOpacity>
+                        </View>
+                    </Animated.View>
+                </SafeAreaView>
+            </Animated.View>
+
+            {showPicker ? (
+                Platform.OS === 'ios' ? (
+                    <Modal transparent animationType="slide" visible={showPicker} onRequestClose={closeDatePicker}>
+                        <View style={styles.pickerOverlay}>
+                            <View style={styles.pickerSheet}>
+                                <View style={styles.pickerHandle} />
+                                <Text style={styles.pickerTitle}>Choose Sunday</Text>
+                                <DateTimePicker value={draftDateObj} mode="date" display="spinner" onChange={onChangeDate} />
+                                <View style={styles.pickerActions}>
+                                    <TouchableOpacity style={styles.pickerGhostButton} onPress={closeDatePicker}>
+                                        <Text style={styles.pickerGhostButtonText}>Cancel</Text>
+                                    </TouchableOpacity>
+                                    <TouchableOpacity style={styles.pickerPrimaryButton} onPress={confirmDatePicker}>
+                                        <Text style={styles.pickerPrimaryButtonText}>Done</Text>
+                                    </TouchableOpacity>
+                                </View>
+                            </View>
+                        </View>
+                    </Modal>
+                ) : (
+                    <DateTimePicker value={dateObj} mode="date" display="default" onChange={onChangeDate} />
+                )
+            ) : null}
+
+            <Animated.ScrollView
+                style={styles.content}
+                contentContainerStyle={[styles.contentInner, { paddingTop: HERO_MAX_HEIGHT - 92 }]}
+                showsVerticalScrollIndicator={false}
+                scrollEventThrottle={16}
+                onScroll={Animated.event(
+                    [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+                    { useNativeDriver: false }
+                )}
+            >
+                <Animated.View style={[styles.floatingStage, { transform: [{ translateY: floatingTranslateY }] }]}>
+                    <TouchableOpacity style={[styles.dateCard, Shadows.lg]} onPress={openDatePicker} activeOpacity={0.92}>
+                        <View style={styles.dateCopy}>
+                            <Text style={styles.dateLabel}>Selected Sunday</Text>
+                            <Text style={styles.dateValue}>{selectedDateString}</Text>
+                            <Text style={styles.dateCaption}>Tap to switch the service date or revisit older attendance.</Text>
+                        </View>
+                        <View style={[styles.dateOrb, { backgroundColor: palette.primarySoft }]}>
+                            <View style={styles.dateIconWrap}>
+                                <Feather name="calendar" size={18} color={palette.primaryDark} />
+                            </View>
+                        </View>
                     </TouchableOpacity>
+
+                    <View style={styles.ribbonRow}>
+                        <View style={[styles.ribbonCard, Shadows.sm]}>
+                            <Text style={styles.ribbonTitle}>Today’s pulse</Text>
+                            <Text style={styles.ribbonText}>
+                                {presentCount > 0
+                                    ? `${presentCount} students are already marked present.`
+                                    : 'Start checking students in to build the Sunday pulse.'}
+                            </Text>
+                        </View>
+                        <View style={[styles.ribbonStatus, { backgroundColor: isSunday ? palette.accentSoft : Colors.warningSoft }]}>
+                            <View style={[styles.ribbonStatusDot, { backgroundColor: isSunday ? palette.accent : Colors.warning }]} />
+                            <Text style={[styles.ribbonStatusText, { color: isSunday ? palette.accent : Colors.warning }]}>
+                                {isSunday ? 'Live Sunday' : 'Locked'}
+                            </Text>
+                        </View>
+                    </View>
+                </Animated.View>
+
+                {!isSunday ? (
+                    <View style={[styles.warningCard, Shadows.sm]}>
+                        <Feather name="alert-triangle" size={16} color={Colors.warning} />
+                        <Text style={styles.warningText}>Attendance is currently limited to Sundays.</Text>
+                    </View>
+                ) : null}
+
+                {feedback ? (
+                    <View style={[styles.feedbackBanner, Shadows.sm]}>
+                        <Feather name="check-circle" size={16} color={palette.primary} />
+                        <Text style={styles.feedbackText}>{feedback}</Text>
+                    </View>
+                ) : null}
+
+                <View style={styles.statsRow}>
+                    <StatCard label="Students" value={students.length} />
+                    <StatCard label="Present" value={presentCount} tone="present" />
+                    <StatCard label="Absent" value={absentCount} tone="absent" />
                 </View>
 
-                {showPicker && (
-                    <DateTimePicker
-                        value={dateObj}
-                        mode="date"
-                        display="default"
-                        onChange={onChangeDate}
-                    />
-                )}
+                <View style={[styles.summaryCard, Shadows.md]}>
+                    <View style={styles.sectionHeader}>
+                        <View style={styles.sectionCopy}>
+                            <Text style={styles.sectionEyebrow}>Lesson Note</Text>
+                            <Text style={styles.sectionTitle}>Today’s summary</Text>
+                            <Text style={styles.sectionCaption}>Capture the memory verse, lesson focus, or key moments for later reporting.</Text>
+                        </View>
 
-                {Platform.OS === 'ios' && showPicker && (
-                    <TouchableOpacity
-                        style={styles.iosPickerDone}
-                        onPress={() => setShowPicker(false)}
-                    >
-                        <Text style={styles.iosPickerDoneText}>Done</Text>
-                    </TouchableOpacity>
-                )}
+                        <View style={[styles.summaryIconWrap, { backgroundColor: palette.primarySoft }]}>
+                            <Feather name="edit-3" size={16} color={palette.primary} />
+                        </View>
+                    </View>
 
-                {!isSunday && (
-                    <View style={styles.sundayWarning}>
-                        <Feather name="alert-circle" size={16} color={Colors.white} style={{ marginRight: 8 }} />
-                        <Text style={styles.sundayWarningText}>Attendance is restricted to Sundays only.</Text>
-                    </View>
-                )}
-
-                {/* Floating Stats Pill */}
-                <View style={[styles.statsBar, Shadows.md]}>
-                    <View style={styles.statItem}>
-                        <Text style={styles.statLabel}>Total</Text>
-                        <Text style={styles.statNum}>{students.length}</Text>
-                    </View>
-                    <View style={[styles.statItem, styles.statDivider]}>
-                        <Text style={styles.statLabel}>Present</Text>
-                        <Text style={[styles.statNum, { color: Colors.present }]}>{presentCount}</Text>
-                    </View>
-                    <View style={styles.statItem}>
-                        <Text style={styles.statLabel}>Absent</Text>
-                        <Text style={[styles.statNum, { color: Colors.danger }]}>{absentCount}</Text>
-                    </View>
-                </View>
-
-                {/* Class Summary */}
-                <View style={styles.summaryContainer}>
-                    <Text style={styles.summaryLabel}>Class Summary</Text>
                     <TextInput
                         style={styles.summaryInput}
-                        placeholder="What was taught today? (e.g. David and Goliath)"
-                        placeholderTextColor={Colors.textSecondary}
+                        placeholder="Write a short note about the lesson, memory verse, or activity."
+                        placeholderTextColor={Colors.textMuted}
                         multiline
-                        numberOfLines={3}
+                        numberOfLines={4}
                         value={summary}
                         onChangeText={setSummary}
-                        editable={isSunday} // Only allow edits on Sunday mode
+                        editable={isSunday}
                     />
                 </View>
 
-                {/* List Container */}
-                <View style={styles.listContainer}>
+                <View style={[styles.studentsSection, Shadows.md]}>
+                    <View style={styles.studentsHeader}>
+                        <View style={styles.sectionCopy}>
+                            <Text style={styles.sectionEyebrow}>Roster</Text>
+                            <Text style={styles.sectionTitle}>Students</Text>
+                            <Text style={styles.sectionCaption}>Tap a student card for spotlight, then toggle attendance in one quick move.</Text>
+                        </View>
+
+                        <View style={styles.studentsCountPill}>
+                            <Text style={styles.studentsCountText}>{students.length}</Text>
+                        </View>
+                    </View>
+
                     {loading ? (
-                        <View style={styles.centered}>
+                        <View style={styles.centerState}>
                             <ActivityIndicator size="large" color={Colors.primary} />
-                            <Text style={styles.loadingText}>Fetching students...</Text>
+                            <Text style={styles.stateTitle}>Loading students</Text>
+                            <Text style={styles.stateSubtitle}>Pulling the latest Sunday class register.</Text>
                         </View>
                     ) : students.length === 0 ? (
-                        <View style={styles.centered}>
-                            <Feather name="users" size={48} color={Colors.textSecondary} style={{ opacity: 0.5, marginBottom: 16 }} />
-                            <Text style={styles.emptyText}>No students registered</Text>
-                            <Text style={styles.emptySubtext}>Head to the Add Student tab to begin</Text>
+                        <View style={styles.centerState}>
+                            <View style={styles.emptyIconWrap}>
+                                <Feather name="users" size={28} color={Colors.primary} />
+                            </View>
+                            <Text style={styles.stateTitle}>No students yet</Text>
+                            <Text style={styles.stateSubtitle}>Open the Add Student tab to build your class roster.</Text>
                         </View>
                     ) : (
-                        <FlatList
-                            data={students}
-                            keyExtractor={(item) => item.id}
-                            renderItem={renderItem}
-                            contentContainerStyle={styles.listContent}
-                            showsVerticalScrollIndicator={false}
-                        />
+                        <View style={styles.listContent}>
+                            {students.map((item) => (
+                                <View key={item.id}>
+                                    {renderItem({ item })}
+                                </View>
+                            ))}
+                        </View>
                     )}
                 </View>
+            </Animated.ScrollView>
 
-                {/* Floating Save Button */}
-                {students.length > 0 && isSunday && (
-                    <View style={styles.footerWrap}>
-                        <TouchableOpacity
-                            style={[styles.saveBtn, saving && styles.saveBtnDisabled, Shadows.lg]}
-                            onPress={handleSave}
-                            disabled={saving}
-                            activeOpacity={0.9}
-                        >
-                            {saving ? (
-                                <ActivityIndicator color={Colors.white} />
-                            ) : (
-                                <>
-                                    <Feather name="save" size={20} color={Colors.white} style={{ marginRight: 10 }} />
-                                    <Text style={styles.saveBtnText}>Save Attendance</Text>
-                                </>
-                            )}
-                        </TouchableOpacity>
-                    </View>
-                )}
-            </SafeAreaView>
+            {students.length > 0 && isSunday ? (
+                <View style={styles.footerWrap}>
+                    <TouchableOpacity
+                        style={[styles.saveButton, saving && styles.saveButtonDisabled, Shadows.lg]}
+                        onPress={handleSave}
+                        disabled={saving}
+                        activeOpacity={0.9}
+                    >
+                        {saving ? (
+                            <ActivityIndicator color={Colors.white} />
+                        ) : (
+                            <>
+                                <Feather name="save" size={18} color={Colors.white} />
+                                <Text style={styles.saveButtonText}>Save Attendance</Text>
+                            </>
+                        )}
+                    </TouchableOpacity>
+                </View>
+            ) : null}
         </View>
     );
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: Colors.background },
-    safeArea: { flex: 1 },
-    headerBackgroundShape: {
+    container: {
+        flex: 1,
+        backgroundColor: Colors.background,
+    },
+    hero: {
         position: 'absolute',
         top: 0,
         left: 0,
         right: 0,
-        height: 280,
-        backgroundColor: Colors.primary,
-        borderBottomLeftRadius: 40,
-        borderBottomRightRadius: 40,
+        zIndex: 3,
+        paddingHorizontal: Spacing.lg,
+        borderBottomLeftRadius: 36,
+        borderBottomRightRadius: 36,
+        overflow: 'hidden',
     },
-    header: {
+    heroSafeArea: {
+        flex: 1,
+    },
+    heroGlow: {
+        position: 'absolute',
+        width: 280,
+        height: 280,
+        borderRadius: 140,
+        top: -90,
+        right: -100,
+    },
+    heroGlowSecondary: {
+        position: 'absolute',
+        width: 240,
+        height: 240,
+        borderRadius: 120,
+        left: -100,
+        bottom: -80,
+    },
+    heroCompactBar: {
+        minHeight: 60,
+        paddingTop: 8,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+    },
+    heroCompactIdentity: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 10,
+    },
+    heroCompactLogo: {
+        width: 34,
+        height: 34,
+        borderRadius: 10,
+        backgroundColor: Colors.white,
+    },
+    heroCompactLogoFallback: {
+        width: 34,
+        height: 34,
+        borderRadius: 10,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    heroCompactTitle: {
+        color: Colors.white,
+        fontSize: 15,
+        fontWeight: '800',
+    },
+    heroCompactSubtitle: {
+        color: 'rgba(255,255,255,0.76)',
+        fontSize: 11,
+        fontWeight: '600',
+        marginTop: 2,
+    },
+    heroCompactAction: {
+        width: 38,
+        height: 38,
+        borderRadius: 14,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    heroExpanded: {
+        flex: 1,
+        justifyContent: 'flex-end',
+        paddingTop: 12,
+        paddingBottom: 34,
+    },
+    heroTopRow: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'flex-start',
-        paddingHorizontal: 24,
-        paddingTop: 32,
-        paddingBottom: 24,
+        gap: 12,
     },
-    headerGreeting: { fontSize: 16, color: 'rgba(255,255,255,0.85)', fontWeight: '600', marginBottom: 2 },
-    headerTitle: { fontSize: 28, fontWeight: '800', color: Colors.white, letterSpacing: 0.5, marginBottom: 12 },
-    dateBadge: {
+    heroCopy: {
+        flex: 1,
+    },
+    heroEyebrow: {
+        color: 'rgba(255,255,255,0.76)',
+        fontSize: 12,
+        fontWeight: '700',
+        textTransform: 'uppercase',
+        letterSpacing: 1.1,
+        marginBottom: 6,
+    },
+    heroTitle: {
+        color: Colors.white,
+        fontSize: 31,
+        fontWeight: '800',
+        letterSpacing: -0.8,
+    },
+    heroSubtitle: {
+        color: 'rgba(255,255,255,0.86)',
+        fontSize: 14,
+        lineHeight: 20,
+        marginTop: 8,
+        maxWidth: 290,
+    },
+    churchPill: {
+        marginTop: 14,
+        alignSelf: 'flex-start',
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: 'rgba(255,255,255,0.2)',
-        alignSelf: 'flex-start',
+        gap: 8,
+        backgroundColor: 'rgba(255,255,255,0.14)',
+        borderRadius: Radius.pill,
         paddingHorizontal: 12,
-        paddingVertical: 6,
-        borderRadius: 20,
+        paddingVertical: 8,
     },
-    headerDate: { fontSize: 13, color: Colors.white, fontWeight: '600' },
-    logoutBtn: {
-        width: 44,
-        height: 44,
-        borderRadius: 22,
-        backgroundColor: 'rgba(255,255,255,0.15)',
-        justifyContent: 'center',
+    churchLogo: {
+        width: 18,
+        height: 18,
+        borderRadius: 9,
+        backgroundColor: Colors.white,
+    },
+    churchPillText: {
+        color: Colors.white,
+        fontSize: 12,
+        fontWeight: '700',
+    },
+    heroSignalRow: {
+        flexDirection: 'row',
+        gap: 10,
+        marginTop: 16,
+    },
+    heroSignalCard: {
+        paddingHorizontal: 12,
+        paddingVertical: 10,
+        borderRadius: Radius.md,
+        backgroundColor: 'rgba(255,255,255,0.12)',
+    },
+    heroSignalCardMuted: {
+        backgroundColor: 'rgba(255,255,255,0.08)',
+    },
+    heroSignalLabel: {
+        color: 'rgba(255,255,255,0.66)',
+        fontSize: 11,
+        fontWeight: '700',
+        textTransform: 'uppercase',
+        letterSpacing: 0.8,
+    },
+    heroSignalValue: {
+        color: Colors.white,
+        fontSize: 15,
+        fontWeight: '800',
+        marginTop: 5,
+    },
+    heroIconButton: {
+        width: 46,
+        height: 46,
+        borderRadius: 18,
         alignItems: 'center',
+        justifyContent: 'center',
+        marginTop: 12,
     },
-
-    // Stats Floating Pill
-    summaryContainer: {
-        marginHorizontal: 24,
-        marginBottom: 10,
-        backgroundColor: Colors.surface,
-        borderRadius: Radius.lg,
-        padding: 16,
+    content: {
+        flex: 1,
+    },
+    contentInner: {
+        paddingHorizontal: Spacing.lg,
+        paddingBottom: 170,
+    },
+    floatingStage: {
+        marginBottom: Spacing.lg,
+    },
+    dateCard: {
+        backgroundColor: Colors.white,
+        borderRadius: 28,
+        paddingHorizontal: 18,
+        paddingVertical: 18,
+        flexDirection: 'row',
+        alignItems: 'center',
         borderWidth: 1,
         borderColor: Colors.border,
     },
-    summaryLabel: { fontSize: 13, fontWeight: '700', color: Colors.text, marginBottom: 8 },
-    summaryInput: {
-        fontSize: 15,
+    dateCopy: {
+        flex: 1,
+        paddingRight: 14,
+    },
+    dateLabel: {
+        color: Colors.textSecondary,
+        fontSize: 12,
+        fontWeight: '700',
+        textTransform: 'uppercase',
+        letterSpacing: 0.9,
+        marginBottom: 4,
+    },
+    dateValue: {
         color: Colors.text,
-        minHeight: 60,
+        fontSize: 19,
+        fontWeight: '800',
+    },
+    dateCaption: {
+        color: Colors.textMuted,
+        fontSize: 12,
+        lineHeight: 18,
+        marginTop: 6,
+    },
+    dateOrb: {
+        width: 68,
+        height: 68,
+        borderRadius: 24,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    dateIconWrap: {
+        width: 42,
+        height: 42,
+        borderRadius: 16,
+        backgroundColor: Colors.white,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    ribbonRow: {
+        flexDirection: 'row',
+        gap: 10,
+        marginTop: 14,
+    },
+    ribbonCard: {
+        flex: 1,
+        backgroundColor: Colors.surface,
+        borderRadius: 22,
+        paddingHorizontal: 16,
+        paddingVertical: 14,
+        borderWidth: 1,
+        borderColor: Colors.border,
+    },
+    ribbonTitle: {
+        color: Colors.text,
+        fontSize: 13,
+        fontWeight: '800',
+        marginBottom: 5,
+    },
+    ribbonText: {
+        color: Colors.textSecondary,
+        fontSize: 12,
+        lineHeight: 18,
+    },
+    ribbonStatus: {
+        minWidth: 112,
+        borderRadius: 22,
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 7,
+        paddingHorizontal: 14,
+        paddingVertical: 14,
+    },
+    ribbonStatusDot: {
+        width: 12,
+        height: 12,
+        borderRadius: 6,
+    },
+    ribbonStatusText: {
+        fontSize: 12,
+        fontWeight: '800',
+    },
+    warningCard: {
+        backgroundColor: Colors.warningSoft,
+        borderRadius: Radius.md,
+        paddingHorizontal: 14,
+        paddingVertical: 12,
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 10,
+        marginBottom: Spacing.md,
+    },
+    warningText: {
+        color: Colors.warning,
+        fontSize: 13,
+        fontWeight: '700',
+        flex: 1,
+    },
+    feedbackBanner: {
+        backgroundColor: Colors.surface,
+        borderRadius: Radius.lg,
+        paddingHorizontal: 14,
+        paddingVertical: 12,
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 10,
+        marginBottom: Spacing.md,
+        borderWidth: 1,
+        borderColor: Colors.border,
+    },
+    feedbackText: {
+        color: Colors.text,
+        fontSize: 13,
+        lineHeight: 18,
+        fontWeight: '700',
+        flex: 1,
+    },
+    statsRow: {
+        flexDirection: 'row',
+        gap: 12,
+        marginBottom: Spacing.md,
+    },
+    statCard: {
+        flex: 1,
+        backgroundColor: Colors.surface,
+        borderRadius: 24,
+        paddingHorizontal: 14,
+        paddingVertical: 18,
+        borderWidth: 1,
+        borderColor: Colors.border,
+    },
+    statLabel: {
+        color: Colors.textSecondary,
+        fontSize: 12,
+        fontWeight: '700',
+        textTransform: 'uppercase',
+        letterSpacing: 0.9,
+        marginBottom: 10,
+    },
+    statValue: {
+        color: Colors.text,
+        fontSize: 28,
+        fontWeight: '800',
+    },
+    statValuePresent: {
+        color: Colors.present,
+        fontSize: 28,
+        fontWeight: '800',
+    },
+    statValueAbsent: {
+        color: Colors.absent,
+        fontSize: 28,
+        fontWeight: '800',
+    },
+    summaryCard: {
+        backgroundColor: Colors.surface,
+        borderRadius: 28,
+        padding: Spacing.lg,
+        borderWidth: 1,
+        borderColor: Colors.border,
+        marginBottom: Spacing.md,
+    },
+    sectionHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'flex-start',
+        gap: 12,
+        marginBottom: Spacing.md,
+    },
+    sectionCopy: {
+        flex: 1,
+    },
+    sectionEyebrow: {
+        color: Colors.textSecondary,
+        fontSize: 12,
+        fontWeight: '700',
+        textTransform: 'uppercase',
+        letterSpacing: 0.8,
+        marginBottom: 4,
+    },
+    sectionTitle: {
+        color: Colors.text,
+        fontSize: 22,
+        fontWeight: '800',
+    },
+    sectionCaption: {
+        color: Colors.textSecondary,
+        fontSize: 12,
+        lineHeight: 18,
+        marginTop: 6,
+    },
+    summaryIconWrap: {
+        width: 42,
+        height: 42,
+        borderRadius: 16,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    summaryInput: {
+        minHeight: 120,
+        borderRadius: 22,
+        paddingHorizontal: 16,
+        paddingVertical: 14,
+        backgroundColor: Colors.surfaceAlt,
+        borderWidth: 1,
+        borderColor: Colors.border,
+        color: Colors.text,
+        fontSize: 15,
+        lineHeight: 22,
         textAlignVertical: 'top',
     },
-
-    iosPickerDone: {
-        backgroundColor: Colors.white,
-        padding: 10,
-        alignItems: 'center',
-    },
-    iosPickerDoneText: {
-        color: Colors.primary,
-        fontWeight: 'bold',
-    },
-
-    statsBar: {
-        flexDirection: 'row',
+    studentsSection: {
         backgroundColor: Colors.surface,
-        marginHorizontal: 24,
-        borderRadius: Radius.xl,
-        paddingVertical: 20,
-        paddingHorizontal: 16,
-        alignItems: 'center',
-        marginTop: 10,
-        marginBottom: 10,  // Pulls list up to overlap visually
-        zIndex: 10,
-    },
-    statItem: { flex: 1, alignItems: 'center' },
-    statDivider: {
-        borderLeftWidth: 1,
-        borderRightWidth: 1,
-        borderColor: Colors.border,
-    },
-    statNum: { fontSize: 26, fontWeight: '800', color: Colors.text, marginTop: 4 },
-    statLabel: { fontSize: 12, color: Colors.textSecondary, textTransform: 'uppercase', fontWeight: '700', letterSpacing: 0.5 },
-
-    // Lists
-    sundayWarning: {
-        backgroundColor: 'rgba(239, 68, 68, 0.9)',
-        marginHorizontal: 24,
-        marginTop: -8,
-        paddingVertical: 10,
-        paddingHorizontal: 16,
-        borderRadius: Radius.md,
-        flexDirection: 'row',
-        alignItems: 'center',
-    },
-    sundayWarningText: { color: Colors.white, fontSize: 13, fontWeight: '600' },
-
-    listContainer: { flex: 1, backgroundColor: Colors.background },
-    listContent: { padding: 24, paddingBottom: 100 },
-    row: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: Colors.surface,
-        borderRadius: Radius.lg,
-        padding: 16,
-        marginBottom: 16,
-    },
-    birthdayRow: {
-        borderColor: '#FDE68A',
-        borderWidth: 2,
-        backgroundColor: '#FFFBEB',
-    },
-
-    // Avatar
-    avatarContainer: {
-        width: 52,
-        height: 52,
-        borderRadius: 26,
-        backgroundColor: Colors.primaryLight,
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginRight: 16,
-    },
-    avatarText: { color: Colors.white, fontSize: 20, fontWeight: '700' },
-    avatarPhoto: {
-        width: 52,
-        height: 52,
-        borderRadius: 26,
-        marginRight: 16,
-        borderWidth: 2,
-        borderColor: Colors.border,
-    },
-
-    studentInfo: { flex: 1, marginRight: 12, justifyContent: 'center' },
-    studentName: { fontSize: 17, fontWeight: '700', color: Colors.text, marginBottom: 6 },
-    birthdayText: { color: '#D97706' },
-    classBadge: {
-        alignSelf: 'flex-start',
-        backgroundColor: Colors.background,
-        paddingHorizontal: 8,
-        paddingVertical: 4,
-        borderRadius: 6,
+        borderRadius: 28,
+        padding: Spacing.lg,
         borderWidth: 1,
         borderColor: Colors.border,
     },
-    classBadgeText: { fontSize: 11, color: Colors.textSecondary, fontWeight: '600' },
-    birthdayHighlightText: { fontSize: 11, color: '#D97706', fontWeight: '700', marginLeft: 6 },
-
-    toggleBtn: {
+    studentsHeader: {
         flexDirection: 'row',
-        alignItems: 'center',
-        paddingVertical: 10,
-        paddingHorizontal: 14,
-        borderRadius: Radius.xl,
-        borderWidth: 1.5,
+        justifyContent: 'space-between',
+        alignItems: 'flex-start',
+        gap: 12,
+        marginBottom: Spacing.md,
     },
-    presentBtn: { backgroundColor: Colors.presentBg, borderColor: 'rgba(5, 150, 105, 0.2)' },
-    absentBtn: { backgroundColor: Colors.absentBg, borderColor: 'rgba(225, 29, 72, 0.2)' },
-    toggleText: { fontSize: 13, fontWeight: '700' },
-    presentText: { color: Colors.present },
-    absentText: { color: Colors.absent },
-
-    // Footer
-    footerWrap: {
-        position: 'absolute',
-        bottom: 32,
-        left: 24,
-        right: 24,
-    },
-    saveBtn: {
-        flexDirection: 'row',
-        backgroundColor: Colors.primary,
-        borderRadius: Radius.xl,
-        paddingVertical: 18,
+    studentsCountPill: {
+        minWidth: 46,
+        height: 46,
+        borderRadius: 18,
+        backgroundColor: Colors.primarySoft,
         alignItems: 'center',
         justifyContent: 'center',
     },
-    saveBtnDisabled: { opacity: 0.7 },
-    saveBtnText: { color: Colors.white, fontSize: 16, fontWeight: '700', letterSpacing: 0.5 },
-
-    // States
-    centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-    loadingText: { marginTop: 12, color: Colors.textSecondary, fontSize: 15, fontWeight: '500' },
-    emptyText: { fontSize: 18, fontWeight: '700', color: Colors.text, marginBottom: 8 },
-    emptySubtext: { fontSize: 14, color: Colors.textSecondary },
-
-    // Jesus Loves hint (shows ❤️ on right of row as a hint)
-    jesusHint: {
-        width: 36, height: 36, borderRadius: 18,
-        backgroundColor: '#FEF2F2',
-        alignItems: 'center', justifyContent: 'center',
-        marginRight: 8,
-        borderWidth: 1, borderColor: '#FECACA',
+    studentsCountText: {
+        color: Colors.primaryDark,
+        fontSize: 19,
+        fontWeight: '800',
+    },
+    centerState: {
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: 32,
+    },
+    emptyIconWrap: {
+        width: 72,
+        height: 72,
+        borderRadius: 24,
+        backgroundColor: Colors.primarySoft,
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginBottom: 14,
+    },
+    stateTitle: {
+        color: Colors.text,
+        fontSize: 18,
+        fontWeight: '800',
+        marginTop: 12,
+    },
+    stateSubtitle: {
+        color: Colors.textSecondary,
+        fontSize: 13,
+        lineHeight: 20,
+        textAlign: 'center',
+        maxWidth: 260,
+        marginTop: 6,
+    },
+    listContent: {
+        gap: 12,
+    },
+    studentCard: {
+        backgroundColor: Colors.surfaceAlt,
+        borderRadius: 24,
+        padding: 16,
+        borderWidth: 1,
+        borderColor: Colors.border,
+    },
+    studentCardBirthday: {
+        backgroundColor: '#FFF9EE',
+        borderColor: Colors.accentLight,
+    },
+    studentIdentity: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 14,
+    },
+    avatarPhoto: {
+        width: 58,
+        height: 58,
+        borderRadius: 20,
+    },
+    avatarFallback: {
+        width: 58,
+        height: 58,
+        borderRadius: 20,
+        backgroundColor: Colors.primarySoft,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    avatarText: {
+        color: Colors.primaryDark,
+        fontSize: 20,
+        fontWeight: '800',
+    },
+    studentMeta: {
+        flex: 1,
+    },
+    nameRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        flexWrap: 'wrap',
+        gap: 8,
+        marginBottom: 8,
+    },
+    studentName: {
+        color: Colors.text,
+        fontSize: 18,
+        fontWeight: '800',
+        flexShrink: 1,
+    },
+    birthdayPill: {
+        backgroundColor: Colors.accentSoft,
+        borderRadius: Radius.pill,
+        paddingHorizontal: 10,
+        paddingVertical: 5,
+    },
+    birthdayPillText: {
+        color: Colors.warning,
+        fontSize: 11,
+        fontWeight: '800',
+    },
+    metaRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        gap: 8,
+    },
+    centerPill: {
+        backgroundColor: Colors.white,
+        borderRadius: Radius.pill,
+        paddingHorizontal: 11,
+        paddingVertical: 7,
+        borderWidth: 1,
+        borderColor: Colors.border,
+    },
+    centerPillText: {
+        color: Colors.textSecondary,
+        fontSize: 12,
+        fontWeight: '700',
+    },
+    spotlightHint: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 5,
+    },
+    spotlightHintText: {
+        color: Colors.primary,
+        fontSize: 12,
+        fontWeight: '700',
+    },
+    actionsRow: {
+        marginTop: 14,
+        flexDirection: 'row',
+        justifyContent: 'flex-end',
+    },
+    statusButton: {
+        borderRadius: Radius.pill,
+        paddingHorizontal: 14,
+        paddingVertical: 11,
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+    },
+    statusButtonPresent: {
+        backgroundColor: Colors.presentBg,
+    },
+    statusButtonAbsent: {
+        backgroundColor: Colors.absentBg,
+    },
+    statusText: {
+        fontSize: 13,
+        fontWeight: '800',
+    },
+    statusTextPresent: {
+        color: Colors.present,
+    },
+    statusTextAbsent: {
+        color: Colors.absent,
+    },
+    pickerOverlay: {
+        flex: 1,
+        justifyContent: 'flex-end',
+        backgroundColor: Colors.overlay,
+    },
+    pickerSheet: {
+        backgroundColor: Colors.surface,
+        borderTopLeftRadius: 30,
+        borderTopRightRadius: 30,
+        paddingHorizontal: Spacing.lg,
+        paddingTop: 18,
+        paddingBottom: 28,
+    },
+    pickerHandle: {
+        width: 42,
+        height: 5,
+        borderRadius: 3,
+        backgroundColor: Colors.borderStrong,
+        alignSelf: 'center',
+        marginBottom: 18,
+    },
+    pickerTitle: {
+        textAlign: 'center',
+        fontSize: 20,
+        fontWeight: '800',
+        color: Colors.text,
+        marginBottom: 10,
+    },
+    pickerActions: {
+        flexDirection: 'row',
+        justifyContent: 'flex-end',
+        gap: 10,
+        marginTop: 18,
+    },
+    pickerGhostButton: {
+        minHeight: 44,
+        paddingHorizontal: 18,
+        borderRadius: Radius.md,
+        borderWidth: 1,
+        borderColor: Colors.border,
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: Colors.surfaceAlt,
+    },
+    pickerGhostButtonText: {
+        color: Colors.textSecondary,
+        fontSize: 14,
+        fontWeight: '700',
+    },
+    pickerPrimaryButton: {
+        minHeight: 44,
+        paddingHorizontal: 18,
+        borderRadius: Radius.md,
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: Colors.primary,
+    },
+    pickerPrimaryButtonText: {
+        color: Colors.white,
+        fontSize: 14,
+        fontWeight: '800',
+    },
+    footerWrap: {
+        position: 'absolute',
+        left: 0,
+        right: 0,
+        bottom: 0,
+        paddingHorizontal: Spacing.lg,
+        paddingTop: 12,
+        paddingBottom: 28,
+        backgroundColor: 'rgba(244,247,251,0.96)',
+    },
+    saveButton: {
+        minHeight: 58,
+        borderRadius: Radius.lg,
+        backgroundColor: Colors.primary,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 10,
+    },
+    saveButtonDisabled: {
+        opacity: 0.7,
+    },
+    saveButtonText: {
+        color: Colors.white,
+        fontSize: 16,
+        fontWeight: '800',
     },
 });

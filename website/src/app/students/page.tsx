@@ -5,7 +5,9 @@ import { useAuth } from '../../context/AuthContext';
 import { useChurch } from '../../context/ChurchContext';
 import Sidebar from '../../components/Sidebar';
 import {
+    Center,
     subscribeStudents,
+    subscribeCenters,
     addStudent,
     updateStudent,
     deleteStudent,
@@ -13,11 +15,16 @@ import {
     uploadToCloudinary,
     Student,
     AttendanceRecord,
+    getStudentCenterLabel,
 } from '../../lib/api';
 
-const CLASSES = ['LKG', 'UKG', '1st', '2nd', '3rd', '4th', '5th', '6th', '7th', '8th', '9th', '10th', '11th', '12th'];
-
 const CLASS_COLORS: Record<string, { bg: string; color: string }> = {
+    'Church': { bg: '#E0F2FE', color: '#075985' },
+    'A1': { bg: '#FEF9C3', color: '#92400E' },
+    'A2': { bg: '#FEF3C7', color: '#92400E' },
+    'A3': { bg: '#DBEAFE', color: '#1E40AF' },
+    'A4': { bg: '#E0E7FF', color: '#3730A3' },
+    'A5': { bg: '#EDE9FE', color: '#5B21B6' },
     'LKG': { bg: '#FEF9C3', color: '#92400E' },
     'UKG': { bg: '#FEF3C7', color: '#92400E' },
     '1st': { bg: '#DBEAFE', color: '#1E40AF' },
@@ -34,7 +41,19 @@ const CLASS_COLORS: Record<string, { bg: string; color: string }> = {
     '12th': { bg: '#FDF4FF', color: '#6B21A8' },
 };
 
-const emptyForm = { name: '', class: '', phone: '', dob: '' };
+const emptyForm = { name: '', centerId: '', phone: '', dob: '' };
+
+function resolveStudentCenter(student: Student, centers: Center[]): Center | null {
+    if (student.centerId) {
+        const byId = centers.find((center) => center.id === student.centerId);
+        if (byId) return byId;
+    }
+    if (student.centerName) {
+        const byName = centers.find((center) => center.name === student.centerName);
+        if (byName) return byName;
+    }
+    return null;
+}
 
 function StudentCard({ student, onView, onEdit, onDelete }: {
     student: Student;
@@ -43,7 +62,8 @@ function StudentCard({ student, onView, onEdit, onDelete }: {
     onDelete: () => void;
 }) {
     const [imgErr, setImgErr] = useState(false);
-    const clsColor = CLASS_COLORS[student.class] ?? { bg: '#EEF2FF', color: '#3730A3' };
+    const centerLabel = getStudentCenterLabel(student);
+    const clsColor = CLASS_COLORS[centerLabel] ?? { bg: '#EEF2FF', color: '#3730A3' };
 
     // Calculate age from DOB
     let displayAge = '';
@@ -108,7 +128,7 @@ function StudentCard({ student, onView, onEdit, onDelete }: {
                     fontSize: 11, fontWeight: 700,
                     boxShadow: '0 2px 8px rgba(0,0,0,0.12)',
                 }}>
-                    Class {student.class}
+                    Center {centerLabel}
                 </div>
             </div>
 
@@ -166,11 +186,12 @@ function StudentCard({ student, onView, onEdit, onDelete }: {
 
 export default function StudentsPage() {
     const { user, loading } = useAuth();
-    const { activeChurchId } = useChurch();
+    const { activeChurchId, activeMembership, multiTenantEnabled } = useChurch();
     const router = useRouter();
+    const [centers, setCenters] = useState<Center[]>([]);
     const [students, setStudents] = useState<Student[]>([]);
     const [search, setSearch] = useState('');
-    const [classFilter, setClassFilter] = useState('');
+    const [centerFilter, setCenterFilter] = useState('');
     const [modal, setModal] = useState<'add' | 'edit' | null>(null);
     const [form, setForm] = useState(emptyForm);
     const [editId, setEditId] = useState<string | null>(null);
@@ -191,15 +212,21 @@ export default function StudentsPage() {
     }, [user, loading, router]);
 
     useEffect(() => {
-        if (!user) return;
+        if (!user || !activeChurchId || !activeMembership) return;
         return subscribeStudents(setStudents, activeChurchId ?? undefined);
-    }, [user, activeChurchId]);
+    }, [user, activeChurchId, activeMembership]);
+
+    useEffect(() => {
+        if (!user || !activeChurchId || !activeMembership) return;
+        return subscribeCenters(setCenters, activeChurchId ?? undefined);
+    }, [user, activeChurchId, activeMembership]);
 
     if (loading || !user) return <div className="loading-page"><div className="spinner" /></div>;
 
     const openAdd = () => { setForm(emptyForm); setFormError(''); setEditId(null); setPhotoFile(null); setPhotoPreview(null); setModal('add'); };
     const openEdit = (s: Student) => {
-        setForm({ name: s.name, class: s.class, phone: s.phone, dob: s.dob ?? '' });
+        const matchedCenter = resolveStudentCenter(s, centers);
+        setForm({ name: s.name, centerId: matchedCenter?.id ?? '', phone: s.phone, dob: s.dob ?? '' });
         setEditId(s.id); setFormError(''); setPhotoFile(null);
         setPhotoPreview(s.photoUrl ?? null); setModal('edit');
     };
@@ -215,7 +242,7 @@ export default function StudentsPage() {
     const handleSave = async () => {
         const missing: string[] = [];
         if (!form.name.trim()) missing.push('Full Name');
-        if (!form.class) missing.push('Class');
+        if (!form.centerId) missing.push('Center');
         if (missing.length > 0) { setFormError(`Please fill in: ${missing.join(', ')}`); return; }
         setFormError('');
         setSaving(true);
@@ -238,9 +265,17 @@ export default function StudentsPage() {
                 age = a;
             }
 
+            const selectedCenter = centers.find((center) => center.id === form.centerId);
+            if (!selectedCenter) {
+                setFormError('Please select a valid center.');
+                setSaving(false);
+                return;
+            }
+
             const payload: Omit<Student, 'id' | 'createdAt'> = {
                 name: form.name.trim(),
-                class: form.class,
+                centerId: selectedCenter.id,
+                centerName: selectedCenter.name,
                 phone: form.phone.trim(),
                 ...(form.dob ? { dob: form.dob } : {}),
                 ...(age !== undefined ? { age } : {}),
@@ -264,27 +299,69 @@ export default function StudentsPage() {
     };
     const closeDetail = () => { setDetailStudent(null); setDetailAttendance([]); };
 
-    const filtered = students.filter(s =>
-        (s.name.toLowerCase().includes(search.toLowerCase()) || s.class.toLowerCase().includes(search.toLowerCase())) &&
-        (!classFilter || s.class === classFilter)
-    );
+    const filtered = students.filter((s) => {
+        const matchedCenter = resolveStudentCenter(s, centers);
+        const centerLabel = matchedCenter?.name ?? getStudentCenterLabel(s);
+        return (
+            (s.name.toLowerCase().includes(search.toLowerCase()) || centerLabel.toLowerCase().includes(search.toLowerCase())) &&
+            (!centerFilter || matchedCenter?.id === centerFilter)
+        );
+    });
 
     const presentCount = detailAttendance.filter(r => r.status === 'present').length;
     const absentCount = detailAttendance.filter(r => r.status === 'absent').length;
     const pct = detailAttendance.length ? Math.round((presentCount / detailAttendance.length) * 100) : null;
 
-    // Class breakdown for summary
-    const classBreakdown = CLASSES.map(c => ({
-        cls: c,
-        count: students.filter(s => s.class === c).length,
-        color: CLASS_COLORS[c] ?? { bg: '#EEF2FF', color: '#3730A3' },
-    })).filter(x => x.count > 0);
+    const studentsNeedingCenterCleanup = students.filter((student) => {
+        const matchedCenter = resolveStudentCenter(student, centers);
+        if (!matchedCenter) return true;
+        return student.centerName !== matchedCenter.name || student.centerId !== matchedCenter.id;
+    });
+
+    // Center breakdown for summary
+    const centerBreakdown = centers.map((center) => ({
+        center,
+        count: students.filter((student) => resolveStudentCenter(student, centers)?.id === center.id).length,
+        color: CLASS_COLORS[center.name] ?? { bg: '#EEF2FF', color: '#3730A3' },
+    })).filter((item) => item.count > 0);
 
     return (
         <div className="app-layout">
             <Sidebar />
             <main className="main-content">
-                {/* Topbar */}
+                <section className="admin-hero">
+                    <div className="admin-hero-grid">
+                        <div>
+                            <div className="admin-hero-eyebrow">Student Directory</div>
+                            <div className="admin-hero-title">Keep every Sunday class student organized, visible, and ready for attendance</div>
+                            <div className="admin-hero-copy">
+                                Manage photos, center assignments, and attendance history from one place so teachers can work faster on Sunday.
+                            </div>
+                            <div className="admin-hero-actions">
+                                <div className="admin-hero-chip">👥 {students.length} registered students</div>
+                                <div className="admin-hero-chip">🏠 {centers.length} configured centers</div>
+                            </div>
+                        </div>
+                        <div className="admin-hero-panel">
+                            <div className="admin-hero-panel-title">Student snapshot</div>
+                            <div className="admin-hero-panel-list">
+                                <div className="admin-hero-panel-item">
+                                    <div className="admin-hero-panel-label">Visible now</div>
+                                    <div className="admin-hero-panel-value">{filtered.length}</div>
+                                </div>
+                                <div className="admin-hero-panel-item">
+                                    <div className="admin-hero-panel-label">Centers in use</div>
+                                    <div className="admin-hero-panel-value">{centerBreakdown.length}</div>
+                                </div>
+                                <div className="admin-hero-panel-item">
+                                    <div className="admin-hero-panel-label">Needs cleanup</div>
+                                    <div className="admin-hero-panel-value">{studentsNeedingCenterCleanup.length}</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
                 <div className="topbar">
                     <div>
                         <div className="topbar-title">👥 Students</div>
@@ -293,40 +370,138 @@ export default function StudentsPage() {
                     <button className="btn btn-primary" onClick={openAdd}>➕ Add Student</button>
                 </div>
 
-                {/* Class summary pills */}
-                {classBreakdown.length > 0 && (
+                {multiTenantEnabled && !activeMembership ? (
+                    <div className="card">
+                        <div className="empty-state">
+                            <div className="empty-state-icon">🔒</div>
+                            <div className="empty-state-text">No church membership linked yet</div>
+                            <div className="empty-state-sub">Ask your church admin to add your UID in the Members page.</div>
+                        </div>
+                    </div>
+                ) : (
+                <>
+                <div className="summary-grid">
+                    <div className="summary-card">
+                        <div className="summary-label">Total students</div>
+                        <div className="summary-value">{students.length}</div>
+                    </div>
+                    <div className="summary-card">
+                        <div className="summary-label">Centers in use</div>
+                        <div className="summary-value">{centerBreakdown.length}</div>
+                    </div>
+                    <div className="summary-card">
+                        <div className="summary-label">Currently visible</div>
+                        <div className="summary-value">{filtered.length}</div>
+                    </div>
+                    <div className="summary-card">
+                        <div className="summary-label">Needs cleanup</div>
+                        <div className="summary-value" style={{ color: studentsNeedingCenterCleanup.length > 0 ? '#D97706' : 'var(--text)' }}>
+                            {studentsNeedingCenterCleanup.length}
+                        </div>
+                    </div>
+                </div>
+
+                {studentsNeedingCenterCleanup.length > 0 && (
+                    <div className="card section-card" style={{ marginBottom: 20 }}>
+                        <div className="section-head">
+                            <div>
+                                <div className="section-title">Center cleanup needed</div>
+                                <div className="section-copy">
+                                    These students still have legacy or missing center assignments. Reassign them to real centers like A1, A2, A3, or Church.
+                                </div>
+                            </div>
+                            <div style={{ background: '#FFF1D9', color: '#B7791F', padding: '8px 12px', borderRadius: 999, fontWeight: 700, fontSize: 12 }}>
+                                {studentsNeedingCenterCleanup.length} needs update
+                            </div>
+                        </div>
+                        <div style={{ display: 'grid', gap: 12 }}>
+                            {studentsNeedingCenterCleanup.map((student) => {
+                                const matchedCenter = resolveStudentCenter(student, centers);
+                                return (
+                                    <div
+                                        key={student.id}
+                                        style={{
+                                            display: 'grid',
+                                            gridTemplateColumns: 'minmax(0, 1.2fr) minmax(0, 1fr) auto',
+                                            gap: 12,
+                                            alignItems: 'center',
+                                            padding: 14,
+                                            borderRadius: 16,
+                                            background: '#F8FAFD',
+                                            border: '1px solid #E2E8F0',
+                                        }}
+                                    >
+                                        <div>
+                                            <div style={{ fontWeight: 700, color: 'var(--text)', marginBottom: 4 }}>{student.name}</div>
+                                            <div style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
+                                                Current label: <strong>{student.centerName || student.centerId || 'Unassigned'}</strong>
+                                            </div>
+                                        </div>
+                                        <select
+                                            className="form-input"
+                                            value={matchedCenter?.id ?? ''}
+                                            onChange={async (e) => {
+                                                const nextCenter = centers.find((center) => center.id === e.target.value);
+                                                if (!nextCenter) return;
+                                                await updateStudent(
+                                                    student.id,
+                                                    {
+                                                        centerId: nextCenter.id,
+                                                        centerName: nextCenter.name,
+                                                    },
+                                                    activeChurchId ?? undefined
+                                                );
+                                            }}
+                                        >
+                                            <option value="">Assign center...</option>
+                                            {centers.map((center) => (
+                                                <option key={center.id} value={center.id}>
+                                                    {center.name}
+                                                </option>
+                                            ))}
+                                        </select>
+                                        <button className="btn btn-ghost" onClick={() => openEdit(student)}>Edit</button>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+                )}
+
+                {/* Center summary pills */}
+                {centerBreakdown.length > 0 && (
                     <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 20 }}>
                         <button
-                            onClick={() => setClassFilter('')}
+                            onClick={() => setCenterFilter('')}
                             style={{
                                 padding: '5px 14px', borderRadius: 999, fontWeight: 600, fontSize: 12,
                                 border: 'none', cursor: 'pointer', fontFamily: 'inherit',
-                                background: !classFilter ? '#4F46E5' : '#E2E8F0',
-                                color: !classFilter ? 'white' : '#64748B',
+                                background: !centerFilter ? '#4F46E5' : '#E2E8F0',
+                                color: !centerFilter ? 'white' : '#64748B',
                                 transition: 'all 0.15s',
                             }}
                         >All ({students.length})</button>
-                        {classBreakdown.map(({ cls, count, color }) => (
-                            <button key={cls}
-                                onClick={() => setClassFilter(cls === classFilter ? '' : cls)}
+                        {centerBreakdown.map(({ center, count, color }) => (
+                            <button key={center.id}
+                            onClick={() => setCenterFilter(center.id === centerFilter ? '' : center.id)}
                                 style={{
                                     padding: '5px 14px', borderRadius: 999, fontWeight: 600, fontSize: 12,
                                     border: 'none', cursor: 'pointer', fontFamily: 'inherit',
-                                    background: classFilter === cls ? color.color : color.bg,
-                                    color: classFilter === cls ? 'white' : color.color,
+                                    background: centerFilter === center.id ? color.color : color.bg,
+                                    color: centerFilter === center.id ? 'white' : color.color,
                                     transition: 'all 0.15s',
                                 }}
-                            >Class {cls} ({count})</button>
+                            >Center {center.name} ({count})</button>
                         ))}
                     </div>
                 )}
 
                 {/* Search bar */}
-                <div className="card" style={{ marginBottom: 24, padding: '14px 20px' }}>
+                <div className="card section-card" style={{ marginBottom: 24, padding: '14px 20px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
                         <div className="search-wrapper">
                             <span className="search-icon">🔍</span>
-                            <input className="search-input" placeholder="Search by name or class..." value={search} onChange={e => setSearch(e.target.value)} style={{ width: 300 }} />
+                            <input className="search-input" placeholder="Search by name or center..." value={search} onChange={e => setSearch(e.target.value)} style={{ width: 300 }} />
                         </div>
                         <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
                             Showing <strong>{filtered.length}</strong> of <strong>{students.length}</strong> students
@@ -385,9 +560,9 @@ export default function StudentsPage() {
                                 <div style={{ fontWeight: 800, fontSize: 22, marginTop: 12, color: '#0F172A' }}>{detailStudent.name}</div>
                                 <span style={{
                                     display: 'inline-block', marginTop: 6, padding: '4px 14px', borderRadius: 999, fontSize: 13, fontWeight: 700,
-                                    background: CLASS_COLORS[detailStudent.class]?.bg ?? '#EEF2FF',
-                                    color: CLASS_COLORS[detailStudent.class]?.color ?? '#3730A3',
-                                }}>Class {detailStudent.class}</span>
+                                    background: CLASS_COLORS[getStudentCenterLabel(detailStudent)]?.bg ?? '#EEF2FF',
+                                    color: CLASS_COLORS[getStudentCenterLabel(detailStudent)]?.color ?? '#3730A3',
+                                }}>Center {getStudentCenterLabel(detailStudent)}</span>
                             </div>
 
                             {/* Info pills */}
@@ -485,11 +660,11 @@ export default function StudentsPage() {
                                     <input className="form-input" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="e.g. Arun Kumar" />
                                 </div>
                                 <div className="form-group">
-                                    <label className="form-label">Class *</label>
-                                    <select className="form-input" value={form.class} onChange={e => setForm({ ...form, class: e.target.value })}>
-                                        <option value="">Select class...</option>
-                                        {CLASSES.map(c => (
-                                            <option key={c} value={c}>Class {c}</option>
+                                    <label className="form-label">Center *</label>
+                                    <select className="form-input" value={form.centerId} onChange={e => setForm({ ...form, centerId: e.target.value })}>
+                                        <option value="">Select center...</option>
+                                        {centers.map((center) => (
+                                            <option key={center.id} value={center.id}>Center {center.name}</option>
                                         ))}
                                     </select>
                                 </div>
@@ -541,6 +716,8 @@ export default function StudentsPage() {
                             </div>
                         </div>
                     </div>
+                )}
+                </>
                 )}
             </main>
         </div>

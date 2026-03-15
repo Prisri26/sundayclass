@@ -14,7 +14,7 @@ export const MULTI_TENANT_ENABLED = parseBoolean(
 export type ScopedCollection =
   | 'students'
   | 'members'
-  | 'classes'
+  | 'centers'
   | 'parents'
   | 'attendanceSessions'
   | 'attendanceRecords'
@@ -25,7 +25,7 @@ export type ScopedCollection =
 const legacyCollectionMap: Record<ScopedCollection, string> = {
   students: 'students',
   members: 'members',
-  classes: 'classes',
+  centers: 'classes',
   parents: 'parents',
   attendanceSessions: 'class_sessions',
   attendanceRecords: 'attendance',

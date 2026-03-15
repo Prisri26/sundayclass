@@ -12,14 +12,18 @@ import { CameraView, useCameraPermissions } from 'expo-camera';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { setSpotlight, uploadStudentPhoto, clearSpotlight } from '../lib/api';
-import { Colors } from '../constants/theme';
+import { Colors, Radius, Shadows } from '../constants/theme';
 import { useChurch } from '../context/ChurchContext';
+import { useChurchBranding } from '../hooks/useChurchBranding';
+import { getBrandPalette } from '../lib/branding';
 
 export default function SpotlightScreen() {
     const { studentId, studentName, churchId } = useLocalSearchParams<{ studentId: string; studentName: string; churchId?: string }>();
     const router = useRouter();
     const { activeChurchId } = useChurch();
     const scopedChurchId = churchId ?? activeChurchId ?? undefined;
+    const { branding } = useChurchBranding(scopedChurchId);
+    const palette = getBrandPalette(branding);
 
     const [permission, requestPermission] = useCameraPermissions();
     const [capturing, setCapturing] = useState(false);
@@ -29,19 +33,18 @@ export default function SpotlightScreen() {
     const cameraRef = useRef<CameraView>(null);
     const countdownRef = useRef<NodeJS.Timeout | null>(null);
 
-    // Request permission on mount
     useEffect(() => {
         if (!permission?.granted) {
             requestPermission();
         }
     }, []);
 
-    // Auto-start countdown once camera is ready
     useEffect(() => {
         if (permission?.granted && !started && !done) {
             setStarted(true);
             let count = 3;
             setCountdown(3);
+
             countdownRef.current = setInterval(() => {
                 count -= 1;
                 setCountdown(count);
@@ -51,6 +54,7 @@ export default function SpotlightScreen() {
                 }
             }, 1000);
         }
+
         return () => {
             if (countdownRef.current) clearInterval(countdownRef.current);
         };
@@ -88,7 +92,7 @@ export default function SpotlightScreen() {
 
     if (!permission) {
         return (
-            <View style={styles.center}>
+            <View style={styles.centerScreen}>
                 <ActivityIndicator size="large" color={Colors.primary} />
             </View>
         );
@@ -96,12 +100,17 @@ export default function SpotlightScreen() {
 
     if (!permission.granted) {
         return (
-            <View style={styles.center}>
-                <Feather name="camera-off" size={48} color={Colors.textSecondary} />
-                <Text style={styles.permText}>Camera permission needed</Text>
-                <TouchableOpacity style={styles.permBtn} onPress={requestPermission}>
-                    <Text style={styles.permBtnText}>Grant Permission</Text>
-                </TouchableOpacity>
+            <View style={styles.permissionScreen}>
+                    <View style={[styles.permissionCard, Shadows.lg]}>
+                    <View style={[styles.permissionIconWrap, { backgroundColor: palette.primarySoft }]}>
+                        <Feather name="camera-off" size={28} color={palette.primary} />
+                    </View>
+                    <Text style={styles.permissionTitle}>Camera permission needed</Text>
+                    <Text style={styles.permissionText}>Allow camera access so we can capture the student spotlight photo.</Text>
+                    <TouchableOpacity style={[styles.permissionButton, { backgroundColor: palette.primary }]} onPress={requestPermission}>
+                        <Text style={styles.permissionButtonText}>Grant Permission</Text>
+                    </TouchableOpacity>
+                </View>
             </View>
         );
     }
@@ -110,71 +119,93 @@ export default function SpotlightScreen() {
         <View style={styles.container}>
             <StatusBar barStyle="light-content" backgroundColor="black" />
 
-            {/* Full-screen front camera */}
             <CameraView
                 ref={cameraRef}
                 style={StyleSheet.absoluteFill}
                 facing="front"
             />
 
-            {/* Dark gradient overlay at top */}
-            <View style={styles.topOverlay}>
-                {/* Back button */}
-                <TouchableOpacity style={styles.backBtn} onPress={() => router.back()} activeOpacity={0.7}>
-                    <Feather name="arrow-left" size={22} color="white" />
+            <View style={styles.overlayTop}>
+                <TouchableOpacity style={styles.backButton} onPress={() => router.back()} activeOpacity={0.85}>
+                    <Feather name="arrow-left" size={20} color={Colors.white} />
                 </TouchableOpacity>
 
-                {/* "Jesus Loves" heading */}
-                <View style={styles.headingWrap}>
-                    <Text style={styles.jesusText}>✝️  Jesus Loves</Text>
-                    <Text style={styles.nameText}>{studentName}</Text>
-                    <Text style={styles.mostText}>the Most! ❤️</Text>
+                <View style={[styles.headerCard, Shadows.md, { borderColor: palette.primarySoft }]}>
+                    <View style={styles.headerTopRow}>
+                        <View>
+                            <Text style={styles.headerEyebrow}>Spotlight Capture</Text>
+                            <Text style={styles.headerTitle}>{studentName}</Text>
+                        </View>
+                        <View style={[styles.headerStatusPill, { backgroundColor: palette.primarySoft }]}>
+                            <View style={[styles.headerStatusDot, { backgroundColor: palette.accent }]} />
+                            <Text style={[styles.headerStatusText, { color: Colors.white }]}>Camera live</Text>
+                        </View>
+                    </View>
+                    <Text style={styles.headerSubtitle}>{branding?.welcomeSubtitle || 'Take a clean portrait and send it to the live spotlight screen.'}</Text>
                 </View>
             </View>
 
-            {/* Bottom overlay — countdown / done state */}
-            <View style={styles.bottomOverlay}>
+            <View style={styles.focusFrameWrap}>
+                <View style={styles.focusFrame}>
+                    <View style={styles.focusCornerTopLeft} />
+                    <View style={styles.focusCornerTopRight} />
+                    <View style={styles.focusCornerBottomLeft} />
+                    <View style={styles.focusCornerBottomRight} />
+                    <Text style={styles.focusText}>Center face here</Text>
+                </View>
+            </View>
+
+            <View style={styles.overlayBottom}>
                 {done ? (
-                    /* ─── Done state ─── */
-                    <View style={styles.doneWrap}>
-                        <Text style={styles.doneIcon}>🎉</Text>
-                        <Text style={styles.doneText}>Now showing on the screen!</Text>
+                    <View style={[styles.bottomCard, Shadows.lg]}>
+                        <View style={[styles.doneBadge, { backgroundColor: palette.primary }]}>
+                            <Feather name="check" size={24} color={Colors.white} />
+                        </View>
+                        <Text style={styles.doneTitle}>Spotlight updated</Text>
+                        <Text style={styles.doneText}>The student is now ready for the screen display.</Text>
                         <View style={styles.doneActions}>
-                            <TouchableOpacity style={styles.retakeBtn} onPress={retake} activeOpacity={0.8}>
-                                <Feather name="refresh-cw" size={16} color={Colors.primary} />
-                                <Text style={styles.retakeBtnText}>Retake</Text>
+                            <TouchableOpacity style={[styles.secondaryButton, { borderColor: palette.primarySoft }]} onPress={retake} activeOpacity={0.85}>
+                                <Feather name="refresh-cw" size={16} color={palette.primary} />
+                                <Text style={styles.secondaryButtonText}>Retake</Text>
                             </TouchableOpacity>
-                            <TouchableOpacity style={styles.clearBtn} onPress={handleClear} activeOpacity={0.8}>
-                                <Feather name="x-circle" size={16} color="white" />
-                                <Text style={styles.clearBtnText}>Clear Spotlight</Text>
+                            <TouchableOpacity style={styles.dangerButton} onPress={handleClear} activeOpacity={0.85}>
+                                <Feather name="x-circle" size={16} color={Colors.white} />
+                                <Text style={styles.dangerButtonText}>Clear</Text>
                             </TouchableOpacity>
                         </View>
                     </View>
                 ) : capturing ? (
-                    /* ─── Uploading ─── */
-                    <View style={styles.capturingWrap}>
-                        <ActivityIndicator size="large" color="white" />
-                        <Text style={styles.capturingText}>Sending to screen…</Text>
+                    <View style={[styles.bottomCard, Shadows.lg]}>
+                        <ActivityIndicator size="large" color={Colors.white} />
+                        <Text style={styles.captureTitle}>Uploading spotlight photo</Text>
+                        <Text style={styles.captureText}>Please hold steady while we send the image.</Text>
                     </View>
                 ) : (
-                    /* ─── Countdown ─── */
-                    <View style={styles.countdownWrap}>
-                        {countdown > 0 ? (
-                            <>
-                                <Text style={styles.countdownHint}>Auto-capturing in</Text>
-                                <View style={styles.countdownCircle}>
-                                    <Text style={styles.countdownNum}>{countdown}</Text>
-                                </View>
-                            </>
-                        ) : (
-                            <ActivityIndicator size="large" color="white" />
-                        )}
-                        {/* Manual capture button */}
-                        <TouchableOpacity style={styles.captureNowBtn} onPress={() => {
-                            if (countdownRef.current) clearInterval(countdownRef.current);
-                            capturePhoto();
-                        }} activeOpacity={0.8}>
-                            <Text style={styles.captureNowText}>📸  Capture Now</Text>
+                    <View style={[styles.bottomCard, Shadows.lg]}>
+                        <Text style={styles.countdownLabel}>Auto capture begins in</Text>
+                        <View style={[styles.countdownCircle, { borderColor: palette.primarySoft }]}>
+                            <Text style={styles.countdownNumber}>{countdown > 0 ? countdown : '...'}</Text>
+                        </View>
+                        <View style={styles.captureHintRow}>
+                            <View style={[styles.captureHintChip, { backgroundColor: 'rgba(255,255,255,0.08)' }]}>
+                                <Feather name="user" size={13} color={Colors.white} />
+                                <Text style={styles.captureHintText}>Single portrait</Text>
+                            </View>
+                            <View style={[styles.captureHintChip, { backgroundColor: 'rgba(255,255,255,0.08)' }]}>
+                                <Feather name="sun" size={13} color={Colors.white} />
+                                <Text style={styles.captureHintText}>Good light</Text>
+                            </View>
+                        </View>
+                        <TouchableOpacity
+                            style={[styles.primaryButton, { backgroundColor: palette.primary }]}
+                            onPress={() => {
+                                if (countdownRef.current) clearInterval(countdownRef.current);
+                                capturePhoto();
+                            }}
+                            activeOpacity={0.88}
+                        >
+                            <Feather name="camera" size={16} color={Colors.white} />
+                            <Text style={styles.primaryButtonText}>Capture Now</Text>
                         </TouchableOpacity>
                     </View>
                 )}
@@ -184,83 +215,338 @@ export default function SpotlightScreen() {
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: 'black' },
-    center: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: Colors.background, gap: 16 },
-
-    topOverlay: {
-        position: 'absolute', top: 0, left: 0, right: 0,
-        paddingTop: 56, paddingHorizontal: 24, paddingBottom: 32,
-        backgroundColor: 'rgba(0,0,0,0.55)',
+    container: {
+        flex: 1,
+        backgroundColor: 'black',
     },
-    backBtn: {
-        width: 42, height: 42, borderRadius: 21,
-        backgroundColor: 'rgba(0,0,0,0.5)',
-        alignItems: 'center', justifyContent: 'center',
-        marginBottom: 20,
+    centerScreen: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: Colors.background,
     },
-    headingWrap: { alignItems: 'center' },
-    jesusText: {
-        fontSize: 18, fontWeight: '700', color: 'rgba(255,255,255,0.85)',
-        letterSpacing: 2, marginBottom: 6,
+    permissionScreen: {
+        flex: 1,
+        backgroundColor: Colors.background,
+        justifyContent: 'center',
+        padding: 24,
     },
-    nameText: {
-        fontSize: 42, fontWeight: '900', color: 'white',
-        textShadowColor: 'rgba(0,0,0,0.6)', textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 8,
-        textAlign: 'center', lineHeight: 48, marginBottom: 6,
-    },
-    mostText: {
-        fontSize: 22, fontWeight: '800', color: '#FDA4AF',
-        textShadowColor: 'rgba(0,0,0,0.5)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 4,
-    },
-
-    bottomOverlay: {
-        position: 'absolute', bottom: 0, left: 0, right: 0,
-        backgroundColor: 'rgba(0,0,0,0.6)',
-        paddingBottom: 60, paddingTop: 28, paddingHorizontal: 24,
+    permissionCard: {
+        backgroundColor: Colors.surface,
+        borderRadius: Radius.xl,
+        padding: 28,
         alignItems: 'center',
     },
-
-    // Countdown
-    countdownWrap: { alignItems: 'center', gap: 16 },
-    countdownHint: { color: 'rgba(255,255,255,0.7)', fontSize: 15, fontWeight: '600' },
+    permissionIconWrap: {
+        width: 66,
+        height: 66,
+        borderRadius: 22,
+        backgroundColor: Colors.primarySoft,
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginBottom: 16,
+    },
+    permissionTitle: {
+        color: Colors.text,
+        fontSize: 22,
+        fontWeight: '800',
+        marginBottom: 8,
+    },
+    permissionText: {
+        color: Colors.textSecondary,
+        fontSize: 14,
+        lineHeight: 20,
+        textAlign: 'center',
+        marginBottom: 20,
+    },
+    permissionButton: {
+        backgroundColor: Colors.primary,
+        minHeight: 52,
+        paddingHorizontal: 22,
+        borderRadius: Radius.lg,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    permissionButtonText: {
+        color: Colors.white,
+        fontSize: 15,
+        fontWeight: '800',
+    },
+    overlayTop: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        paddingTop: 58,
+        paddingHorizontal: 20,
+    },
+    backButton: {
+        width: 42,
+        height: 42,
+        borderRadius: 14,
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: 'rgba(0,0,0,0.38)',
+        marginBottom: 16,
+    },
+    headerCard: {
+        backgroundColor: 'rgba(10,20,36,0.62)',
+        borderRadius: Radius.xl,
+        padding: 18,
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.12)',
+    },
+    headerTopRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'flex-start',
+        gap: 10,
+    },
+    headerEyebrow: {
+        color: 'rgba(255,255,255,0.72)',
+        fontSize: 12,
+        fontWeight: '700',
+        textTransform: 'uppercase',
+        letterSpacing: 1,
+        marginBottom: 6,
+    },
+    headerTitle: {
+        color: Colors.white,
+        fontSize: 30,
+        fontWeight: '800',
+        marginBottom: 6,
+    },
+    headerSubtitle: {
+        color: 'rgba(255,255,255,0.82)',
+        fontSize: 14,
+        lineHeight: 20,
+        marginTop: 8,
+    },
+    headerStatusPill: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+        borderRadius: Radius.pill,
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+    },
+    headerStatusDot: {
+        width: 8,
+        height: 8,
+        borderRadius: 4,
+    },
+    headerStatusText: {
+        fontSize: 12,
+        fontWeight: '700',
+    },
+    focusFrameWrap: {
+        flex: 1,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    focusFrame: {
+        width: 230,
+        height: 310,
+        borderRadius: 32,
+        borderWidth: 3,
+        borderColor: 'rgba(255,255,255,0.9)',
+        backgroundColor: 'rgba(255,255,255,0.06)',
+        alignItems: 'center',
+        justifyContent: 'flex-end',
+        paddingBottom: 16,
+    },
+    focusCornerTopLeft: {
+        position: 'absolute',
+        top: 18,
+        left: 18,
+        width: 34,
+        height: 34,
+        borderTopWidth: 4,
+        borderLeftWidth: 4,
+        borderColor: Colors.white,
+        borderTopLeftRadius: 18,
+    },
+    focusCornerTopRight: {
+        position: 'absolute',
+        top: 18,
+        right: 18,
+        width: 34,
+        height: 34,
+        borderTopWidth: 4,
+        borderRightWidth: 4,
+        borderColor: Colors.white,
+        borderTopRightRadius: 18,
+    },
+    focusCornerBottomLeft: {
+        position: 'absolute',
+        bottom: 18,
+        left: 18,
+        width: 34,
+        height: 34,
+        borderBottomWidth: 4,
+        borderLeftWidth: 4,
+        borderColor: Colors.white,
+        borderBottomLeftRadius: 18,
+    },
+    focusCornerBottomRight: {
+        position: 'absolute',
+        bottom: 18,
+        right: 18,
+        width: 34,
+        height: 34,
+        borderBottomWidth: 4,
+        borderRightWidth: 4,
+        borderColor: Colors.white,
+        borderBottomRightRadius: 18,
+    },
+    focusText: {
+        color: Colors.white,
+        fontSize: 13,
+        fontWeight: '700',
+        backgroundColor: 'rgba(10,20,36,0.45)',
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+        borderRadius: Radius.pill,
+    },
+    overlayBottom: {
+        position: 'absolute',
+        left: 0,
+        right: 0,
+        bottom: 0,
+        paddingHorizontal: 20,
+        paddingBottom: 34,
+    },
+    bottomCard: {
+        backgroundColor: 'rgba(10,20,36,0.78)',
+        borderRadius: Radius.xl,
+        padding: 22,
+        alignItems: 'center',
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.1)',
+    },
+    countdownLabel: {
+        color: 'rgba(255,255,255,0.75)',
+        fontSize: 13,
+        fontWeight: '700',
+        textTransform: 'uppercase',
+        letterSpacing: 0.9,
+        marginBottom: 16,
+    },
     countdownCircle: {
-        width: 80, height: 80, borderRadius: 40,
-        borderWidth: 4, borderColor: 'white',
-        backgroundColor: 'rgba(255,255,255,0.15)',
-        alignItems: 'center', justifyContent: 'center',
+        width: 86,
+        height: 86,
+        borderRadius: 43,
+        borderWidth: 4,
+        borderColor: 'rgba(255,255,255,0.9)',
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginBottom: 20,
     },
-    countdownNum: { color: 'white', fontSize: 40, fontWeight: '900' },
-    captureNowBtn: {
-        marginTop: 8, paddingHorizontal: 28, paddingVertical: 14,
-        backgroundColor: 'rgba(239,68,68,0.85)',
-        borderRadius: 30, borderWidth: 2, borderColor: 'rgba(255,255,255,0.3)',
+    countdownNumber: {
+        color: Colors.white,
+        fontSize: 38,
+        fontWeight: '900',
     },
-    captureNowText: { color: 'white', fontSize: 16, fontWeight: '700' },
-
-    // Capturing / uploading
-    capturingWrap: { alignItems: 'center', gap: 14 },
-    capturingText: { color: 'white', fontSize: 16, fontWeight: '600' },
-
-    // Done
-    doneWrap: { alignItems: 'center', gap: 12 },
-    doneIcon: { fontSize: 48 },
-    doneText: { color: 'white', fontSize: 18, fontWeight: '700', textAlign: 'center' },
-    doneActions: { flexDirection: 'row', gap: 12, marginTop: 8 },
-    retakeBtn: {
-        flexDirection: 'row', alignItems: 'center', gap: 6,
-        paddingHorizontal: 20, paddingVertical: 12,
-        backgroundColor: 'white', borderRadius: 24,
+    captureHintRow: {
+        flexDirection: 'row',
+        gap: 8,
+        marginBottom: 18,
     },
-    retakeBtnText: { color: Colors.primary, fontWeight: '700', fontSize: 14 },
-    clearBtn: {
-        flexDirection: 'row', alignItems: 'center', gap: 6,
-        paddingHorizontal: 20, paddingVertical: 12,
-        backgroundColor: 'rgba(239,68,68,0.8)', borderRadius: 24,
+    captureHintChip: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+        borderRadius: Radius.pill,
+        paddingHorizontal: 12,
+        paddingVertical: 8,
     },
-    clearBtnText: { color: 'white', fontWeight: '700', fontSize: 14 },
-
-    // Permission
-    permText: { fontSize: 16, color: Colors.textSecondary, textAlign: 'center' },
-    permBtn: { backgroundColor: Colors.primary, paddingHorizontal: 24, paddingVertical: 12, borderRadius: 12 },
-    permBtnText: { color: 'white', fontWeight: '700' },
+    captureHintText: {
+        color: Colors.white,
+        fontSize: 12,
+        fontWeight: '700',
+    },
+    primaryButton: {
+        minHeight: 52,
+        borderRadius: Radius.pill,
+        backgroundColor: Colors.primaryLight,
+        paddingHorizontal: 22,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 8,
+    },
+    primaryButtonText: {
+        color: Colors.white,
+        fontSize: 15,
+        fontWeight: '800',
+    },
+    captureTitle: {
+        color: Colors.white,
+        fontSize: 20,
+        fontWeight: '800',
+        marginTop: 16,
+        marginBottom: 6,
+    },
+    captureText: {
+        color: 'rgba(255,255,255,0.78)',
+        fontSize: 14,
+        lineHeight: 20,
+        textAlign: 'center',
+    },
+    doneBadge: {
+        width: 60,
+        height: 60,
+        borderRadius: 20,
+        backgroundColor: Colors.success,
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginBottom: 14,
+    },
+    doneTitle: {
+        color: Colors.white,
+        fontSize: 22,
+        fontWeight: '800',
+        marginBottom: 6,
+    },
+    doneText: {
+        color: 'rgba(255,255,255,0.78)',
+        fontSize: 14,
+        lineHeight: 20,
+        textAlign: 'center',
+        marginBottom: 18,
+    },
+    doneActions: {
+        flexDirection: 'row',
+        gap: 10,
+    },
+    secondaryButton: {
+        minHeight: 48,
+        paddingHorizontal: 18,
+        borderRadius: Radius.pill,
+        backgroundColor: Colors.white,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 8,
+    },
+    secondaryButtonText: {
+        color: Colors.primary,
+        fontSize: 14,
+        fontWeight: '800',
+    },
+    dangerButton: {
+        minHeight: 48,
+        paddingHorizontal: 18,
+        borderRadius: Radius.pill,
+        backgroundColor: 'rgba(217,72,95,0.94)',
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 8,
+    },
+    dangerButtonText: {
+        color: Colors.white,
+        fontSize: 14,
+        fontWeight: '800',
+    },
 });

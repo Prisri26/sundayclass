@@ -1,28 +1,36 @@
 export const Colors = {
-    // Elegant Navy & Royal Blue
-    primary: '#1E3A8A',      // Deep Royal Navy
-    primaryLight: '#3B82F6', // Lighter elegant blue
-    primaryDark: '#1E293B',  // Slate for dark accents
+    primary: '#143C7D',
+    primaryLight: '#2F66C9',
+    primaryDark: '#0C2350',
+    primarySoft: '#DDE9FF',
 
-    // Warm, inviting accents
-    accent: '#F59E0B',       // Amber / Gold
-    accentLight: '#FCD34D',
+    accent: '#E59A2F',
+    accentLight: '#F5C977',
+    accentSoft: '#FFF1D9',
 
-    // Semantic
-    danger: '#E11D48',       // Rose red
-    dangerLight: '#FFE4E6',
-    present: '#059669',      // Emerald Green
-    presentBg: '#ECFDF5',
-    absent: '#E11D48',
-    absentBg: '#FFF1F2',
+    success: '#159A6F',
+    successSoft: '#E7F8F1',
+    danger: '#D9485F',
+    dangerSoft: '#FFE9ED',
+    warning: '#B7791F',
+    warningSoft: '#FFF6DB',
 
-    // Neutrals
-    background: '#F8FAFC',   // Off-white/slate, easier on the eyes
-    surface: '#FFFFFF',      // Pure white cards
-    border: '#E2E8F0',
-    text: '#0F172A',         // Slate 900 (softer than pure black)
-    textSecondary: '#64748B',// Slate 500
+    present: '#159A6F',
+    presentBg: '#E7F8F1',
+    absent: '#D9485F',
+    absentBg: '#FFE9ED',
+
+    background: '#F4F7FB',
+    backgroundMuted: '#ECF1F8',
+    surface: '#FFFFFF',
+    surfaceAlt: '#F8FAFD',
+    border: '#D9E3F0',
+    borderStrong: '#BDD0E6',
+    text: '#142033',
+    textSecondary: '#607089',
+    textMuted: '#8A98AE',
     white: '#FFFFFF',
+    overlay: 'rgba(10, 20, 36, 0.5)',
 };
 
 export const Fonts = {
@@ -32,33 +40,42 @@ export const Fonts = {
 };
 
 export const Radius = {
-    sm: 8,
-    md: 14, // Slightly larger for elegance
-    lg: 20, // Modern card radius
-    xl: 32, // Extra round for pills
+    xs: 6,
+    sm: 10,
+    md: 16,
+    lg: 22,
+    xl: 30,
+    pill: 999,
 };
 
-// Soft, premium glassmorphism-style shadows
+export const Spacing = {
+    xs: 6,
+    sm: 10,
+    md: 16,
+    lg: 24,
+    xl: 32,
+};
+
 export const Shadows = {
     sm: {
-        shadowColor: '#1E293B',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.04,
-        shadowRadius: 6,
+        shadowColor: '#10213D',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.05,
+        shadowRadius: 10,
         elevation: 2,
     },
     md: {
-        shadowColor: '#1E293B',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.06,
-        shadowRadius: 12,
-        elevation: 4,
-    },
-    lg: {
-        shadowColor: '#1E293B',
+        shadowColor: '#10213D',
         shadowOffset: { width: 0, height: 8 },
         shadowOpacity: 0.08,
-        shadowRadius: 24,
+        shadowRadius: 18,
+        elevation: 5,
+    },
+    lg: {
+        shadowColor: '#10213D',
+        shadowOffset: { width: 0, height: 14 },
+        shadowOpacity: 0.12,
+        shadowRadius: 28,
         elevation: 8,
     },
 };
