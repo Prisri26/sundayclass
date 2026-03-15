@@ -2,9 +2,9 @@
 
 import { createContext, ReactNode, useContext, useEffect, useMemo, useState } from 'react';
 import { usePathname } from 'next/navigation';
-import { DEFAULT_CHURCH_ID, MULTI_TENANT_ENABLED } from '../lib/platform';
+import { DEFAULT_CHURCH_ID, MULTI_TENANT_ENABLED, getBootstrapChurchId } from '../lib/platform';
 import { useAuth } from './AuthContext';
-import { ChurchSummary, Membership, getDirectChurchAccess } from '../lib/tenant';
+import { ChurchSummary, Membership, getUserChurchAccess, syncUserChurchAccessProfile } from '../lib/tenant';
 import { BrandingSettings, getChurchBranding } from '../lib/branding';
 
 type ChurchContextValue = {
@@ -69,14 +69,18 @@ export function ChurchProvider({ children }: { children: ReactNode }) {
     console.log('[ChurchContext] Resolving church access', {
       uid: user.uid,
       email: user.email,
-      defaultChurchId: DEFAULT_CHURCH_ID || null,
+      bootstrapChurchId: getBootstrapChurchId(),
       pathname,
     });
 
     setLoading(true);
-    getDirectChurchAccess(user.uid, DEFAULT_CHURCH_ID || undefined)
-      .then((access) => {
+    getUserChurchAccess(user.uid)
+      .then(async (access) => {
         console.log('[ChurchContext] Membership access result', access);
+        await syncUserChurchAccessProfile(user.uid, access, {
+          email: user.email,
+          displayName: user.displayName,
+        });
         const nextChurches = access.map((entry) => entry.church);
         const nextMemberships = access.map((entry) => entry.membership);
         setAvailableChurches(nextChurches);

@@ -37,6 +37,7 @@ export default function CentersPage() {
     const [editId, setEditId] = useState<string | null>(null);
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState('');
+    const [creatingStarters, setCreatingStarters] = useState(false);
 
     useEffect(() => {
         if (!loading && !user) router.replace('/login');
@@ -122,6 +123,36 @@ export default function CentersPage() {
         await deleteCenter(centerId, activeChurchId ?? undefined);
     };
 
+    const handleCreateStarterCenters = async () => {
+        if (!activeChurchId) return;
+        const templates = [
+            { name: 'A1', code: 'A1' },
+            { name: 'A2', code: 'A2' },
+            { name: 'A3', code: 'A3' },
+        ].filter((template) => !centers.some((center) => center.name === template.name || center.code === template.code));
+
+        if (templates.length === 0) {
+            setError('Starter centers already exist.');
+            return;
+        }
+
+        setCreatingStarters(true);
+        setError('');
+        try {
+            for (const template of templates) {
+                await addCenter({
+                    ...template,
+                    active: true,
+                    isChurchLevel: false,
+                }, activeChurchId);
+            }
+        } catch {
+            setError('Failed to create starter centers. Please try again.');
+        } finally {
+            setCreatingStarters(false);
+        }
+    };
+
     const centerStats = centers.map((center) => ({
         center,
         studentCount: students.filter((student) => student.centerId === center.id).length,
@@ -172,7 +203,12 @@ export default function CentersPage() {
                         <div className="topbar-title">🏠 Centers</div>
                         <div className="topbar-meta">Manage Sunday class centers and church-level groups.</div>
                     </div>
-                    <button className="btn btn-primary" onClick={openAdd}>➕ Add Center</button>
+                    <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                        <button className="btn btn-ghost" onClick={handleCreateStarterCenters} disabled={creatingStarters}>
+                            {creatingStarters ? 'Creating...' : '⚡ Add A1/A2/A3'}
+                        </button>
+                        <button className="btn btn-primary" onClick={openAdd}>➕ Add Center</button>
+                    </div>
                 </div>
 
                 {multiTenantEnabled && !activeMembership ? (

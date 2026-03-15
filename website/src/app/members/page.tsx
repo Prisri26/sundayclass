@@ -240,7 +240,20 @@ export default function MembersPage() {
                 )}
 
                 <div className="soft-panel" style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.7 }}>
-                  Each member should first create their own email/password account. Then paste their Firebase UID here to link them to this church.
+                  Each member should first create their own email/password account and sign in once. After that, paste their Firebase UID here to link them to this church.
+                </div>
+
+                <div className="soft-panel" style={{ display: 'grid', gap: 10, fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.7 }}>
+                  <div><strong style={{ color: 'var(--text-primary)' }}>Recommended flow</strong></div>
+                  <div>1. Member creates their own account</div>
+                  <div>2. Member signs in once so their user profile is created</div>
+                  <div>3. Church admin pastes the UID and assigns role + centers</div>
+                  <div>4. Member signs in again and the app resolves the church automatically</div>
+                </div>
+
+                <div className="soft-panel" style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.7 }}>
+                  <strong style={{ color: 'var(--text-primary)' }}>Your current UID:</strong>{' '}
+                  <span style={{ fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace' }}>{user.uid}</span>
                 </div>
 
                 <div>

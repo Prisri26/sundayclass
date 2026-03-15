@@ -11,6 +11,10 @@ export const MULTI_TENANT_ENABLED = parseBoolean(
   false
 );
 
+export function getBootstrapChurchId(): string | null {
+  return DEFAULT_CHURCH_ID || null;
+}
+
 export type ScopedCollection =
   | 'students'
   | 'members'
@@ -35,7 +39,7 @@ const legacyCollectionMap: Record<ScopedCollection, string> = {
 };
 
 export function resolveChurchId(churchId?: string | null): string | null {
-  const resolved = churchId?.trim() || DEFAULT_CHURCH_ID;
+  const resolved = churchId?.trim() || (!MULTI_TENANT_ENABLED ? DEFAULT_CHURCH_ID : '');
   return resolved || null;
 }
 
@@ -48,16 +52,16 @@ export function getCollectionPath(
   churchId?: string | null
 ): string {
   const resolvedChurchId = resolveChurchId(churchId);
-  if (MULTI_TENANT_ENABLED && resolvedChurchId) {
-    return `churches/${resolvedChurchId}/${collectionName}`;
+  if (MULTI_TENANT_ENABLED) {
+    return `churches/${resolvedChurchId || '__missing__'}/${collectionName}`;
   }
   return legacyCollectionMap[collectionName];
 }
 
 export function getSpotlightDocPath(churchId?: string | null): string {
   const resolvedChurchId = resolveChurchId(churchId);
-  if (MULTI_TENANT_ENABLED && resolvedChurchId) {
-    return `churches/${resolvedChurchId}/spotlight/current`;
+  if (MULTI_TENANT_ENABLED) {
+    return `churches/${resolvedChurchId || '__missing__'}/spotlight/current`;
   }
   return 'spotlight/current';
 }

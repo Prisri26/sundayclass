@@ -1,8 +1,8 @@
 import React, { createContext, ReactNode, useContext, useEffect, useMemo, useState } from 'react';
 import { onAuthStateChanged } from 'firebase/auth';
-import { DEFAULT_CHURCH_ID, MULTI_TENANT_ENABLED } from '../lib/platform';
+import { DEFAULT_CHURCH_ID, MULTI_TENANT_ENABLED, getBootstrapChurchId } from '../lib/platform';
 import { auth } from '../lib/firebase';
-import { ChurchSummary, Membership, getUserChurchAccess } from '../lib/tenant';
+import { ChurchSummary, Membership, getUserChurchAccess, syncUserChurchAccessProfile } from '../lib/tenant';
 
 type ChurchContextValue = {
   activeChurchId: string | null;
@@ -42,15 +42,19 @@ export function ChurchProvider({ children }: { children: ReactNode }) {
       if (!user) {
         setAvailableChurches([]);
         setMemberships([]);
-        setActiveChurchId(DEFAULT_CHURCH_ID || null);
+        setActiveChurchId(getBootstrapChurchId());
         setLoading(false);
         return;
       }
 
       setLoading(true);
       getUserChurchAccess(user.uid)
-        .then((access) => {
+        .then(async (access) => {
           if (access.length > 0) {
+            await syncUserChurchAccessProfile(user.uid, access, {
+              email: user.email,
+              displayName: user.displayName,
+            });
             const nextChurches = access.map((entry) => entry.church);
             const nextMemberships = access.map((entry) => entry.membership);
             setAvailableChurches(nextChurches);
@@ -59,22 +63,23 @@ export function ChurchProvider({ children }: { children: ReactNode }) {
               if (current && nextChurches.some((church) => church.id === current)) {
                 return current;
               }
-              return nextChurches[0]?.id ?? (DEFAULT_CHURCH_ID || null);
+              return nextChurches[0]?.id ?? getBootstrapChurchId();
             });
             setLoading(false);
             return;
           }
 
-          if (DEFAULT_CHURCH_ID) {
+          const bootstrapChurchId = getBootstrapChurchId();
+          if (bootstrapChurchId) {
             setAvailableChurches([
               {
-                id: DEFAULT_CHURCH_ID,
+                id: bootstrapChurchId,
                 name: 'Church Workspace',
-                slug: DEFAULT_CHURCH_ID,
+                slug: bootstrapChurchId,
                 status: 'active',
               },
             ]);
-            setActiveChurchId(DEFAULT_CHURCH_ID);
+            setActiveChurchId(bootstrapChurchId);
           } else {
             setAvailableChurches([]);
             setActiveChurchId(null);
@@ -83,16 +88,17 @@ export function ChurchProvider({ children }: { children: ReactNode }) {
           setLoading(false);
         })
         .catch(() => {
-          if (DEFAULT_CHURCH_ID) {
+          const bootstrapChurchId = getBootstrapChurchId();
+          if (bootstrapChurchId) {
             setAvailableChurches([
               {
-                id: DEFAULT_CHURCH_ID,
+                id: bootstrapChurchId,
                 name: 'Church Workspace',
-                slug: DEFAULT_CHURCH_ID,
+                slug: bootstrapChurchId,
                 status: 'active',
               },
             ]);
-            setActiveChurchId(DEFAULT_CHURCH_ID);
+            setActiveChurchId(bootstrapChurchId);
           } else {
             setAvailableChurches([]);
             setActiveChurchId(null);

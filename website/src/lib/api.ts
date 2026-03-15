@@ -16,7 +16,7 @@ import {
     getDoc,
 } from 'firebase/firestore';
 import { db } from './firebase';
-import { getChurchMetadata, getCollectionPath, getSpotlightDocPath } from './platform';
+import { getChurchMetadata, getCollectionPath, getSpotlightDocPath, MULTI_TENANT_ENABLED } from './platform';
 
 const CLOUDINARY_CLOUD_NAME = 'dcgh5awyn';
 const CLOUDINARY_UPLOAD_PRESET = 'sunday_school';
@@ -93,18 +93,24 @@ function normalizeCenter(data: Omit<Center, 'id'>, id: string): Center {
     };
 }
 
+function hasTenantScope(churchId?: string) {
+    return !MULTI_TENANT_ENABLED || !!churchId?.trim();
+}
+
 function getSessionDocId(date: string, centerId?: string): string {
     return `${date}_${centerId ?? 'church'}`;
 }
 
 // --- Students ---
 export async function getStudents(churchId?: string): Promise<Student[]> {
+    if (!hasTenantScope(churchId)) return [];
     const q = query(collection(db, getCollectionPath('students', churchId)), orderBy('name'));
     const snapshot = await getDocs(q);
     return snapshot.docs.map((d) => normalizeStudent(d.data() as Omit<Student, 'id'>, d.id));
 }
 
 export async function addStudent(student: Omit<Student, 'id' | 'createdAt'>, churchId?: string): Promise<void> {
+    if (!hasTenantScope(churchId)) throw new Error('Active church is required before adding students.');
     await addDoc(collection(db, getCollectionPath('students', churchId)), {
         ...student,
         centerId: student.centerId ?? undefined,
@@ -115,12 +121,14 @@ export async function addStudent(student: Omit<Student, 'id' | 'createdAt'>, chu
 }
 
 export async function getCenters(churchId?: string): Promise<Center[]> {
+    if (!hasTenantScope(churchId)) return [];
     const q = query(collection(db, getCollectionPath('centers', churchId)), orderBy('name'));
     const snapshot = await getDocs(q);
     return snapshot.docs.map((d) => normalizeCenter(d.data() as Omit<Center, 'id'>, d.id));
 }
 
 export async function addCenter(center: Omit<Center, 'id' | 'createdAt' | 'updatedAt'>, churchId?: string): Promise<void> {
+    if (!hasTenantScope(churchId)) throw new Error('Active church is required before adding centers.');
     await addDoc(collection(db, getCollectionPath('centers', churchId)), {
         ...center,
         ...getChurchMetadata(churchId),
@@ -130,6 +138,7 @@ export async function addCenter(center: Omit<Center, 'id' | 'createdAt' | 'updat
 }
 
 export async function updateCenter(id: string, data: Partial<Omit<Center, 'id'>>, churchId?: string): Promise<void> {
+    if (!hasTenantScope(churchId)) throw new Error('Active church is required before updating centers.');
     await updateDoc(doc(db, getCollectionPath('centers', churchId), id), {
         ...data,
         updatedAt: Timestamp.now(),
@@ -137,25 +146,30 @@ export async function updateCenter(id: string, data: Partial<Omit<Center, 'id'>>
 }
 
 export async function deleteCenter(id: string, churchId?: string): Promise<void> {
+    if (!hasTenantScope(churchId)) throw new Error('Active church is required before deleting centers.');
     await deleteDoc(doc(db, getCollectionPath('centers', churchId), id));
 }
 
 export async function updateStudent(id: string, data: Partial<Omit<Student, 'id'>>, churchId?: string): Promise<void> {
+    if (!hasTenantScope(churchId)) throw new Error('Active church is required before updating students.');
     await updateDoc(doc(db, getCollectionPath('students', churchId), id), data);
 }
 
 export async function deleteStudent(id: string, churchId?: string): Promise<void> {
+    if (!hasTenantScope(churchId)) throw new Error('Active church is required before deleting students.');
     await deleteDoc(doc(db, getCollectionPath('students', churchId), id));
 }
 
 // --- Attendance ---
 export async function getAttendance(churchId?: string): Promise<AttendanceRecord[]> {
+    if (!hasTenantScope(churchId)) return [];
     const q = query(collection(db, getCollectionPath('attendanceRecords', churchId)), orderBy('date', 'desc'));
     const snapshot = await getDocs(q);
     return snapshot.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<AttendanceRecord, 'id'>) }));
 }
 
 export async function getTodayAttendance(churchId?: string): Promise<AttendanceRecord[]> {
+    if (!hasTenantScope(churchId)) return [];
     const today = new Date().toISOString().split('T')[0];
     const q = query(collection(db, getCollectionPath('attendanceRecords', churchId)), where('date', '==', today));
     const snapshot = await getDocs(q);
@@ -163,6 +177,7 @@ export async function getTodayAttendance(churchId?: string): Promise<AttendanceR
 }
 
 export async function getSessionSummary(date: string, churchId?: string, centerId?: string): Promise<string> {
+    if (!hasTenantScope(churchId)) return '';
     const sessionId = getSessionDocId(date, centerId);
     const sessionDoc = await getDoc(doc(db, getCollectionPath('attendanceSessions', churchId), sessionId));
     if (sessionDoc.exists()) {
@@ -176,6 +191,7 @@ export async function getSessionSummary(date: string, churchId?: string, centerI
 }
 
 export async function saveSessionSummary(date: string, summary: string, churchId?: string, centerId?: string): Promise<void> {
+    if (!hasTenantScope(churchId)) throw new Error('Active church is required before saving a session summary.');
     await setDoc(doc(db, getCollectionPath('attendanceSessions', churchId), getSessionDocId(date, centerId)), {
         date,
         centerId,
@@ -188,6 +204,10 @@ export async function saveSessionSummary(date: string, summary: string, churchId
 
 // Realtime listener for students
 export function subscribeStudents(cb: (students: Student[]) => void, churchId?: string) {
+    if (!hasTenantScope(churchId)) {
+        cb([]);
+        return () => undefined;
+    }
     const q = query(collection(db, getCollectionPath('students', churchId)), orderBy('name'));
     return onSnapshot(q, (snap: QuerySnapshot<DocumentData>) => {
         cb(snap.docs.map((d) => normalizeStudent(d.data() as Omit<Student, 'id'>, d.id)));
@@ -199,6 +219,10 @@ export function subscribeCenters(
     churchId?: string,
     onError?: (error: Error) => void
 ) {
+    if (!hasTenantScope(churchId)) {
+        cb([]);
+        return () => undefined;
+    }
     const q = query(collection(db, getCollectionPath('centers', churchId)), orderBy('name'));
     return onSnapshot(
         q,
@@ -211,6 +235,10 @@ export function subscribeCenters(
 
 // Realtime listener for attendance
 export function subscribeAttendance(cb: (records: AttendanceRecord[]) => void, churchId?: string) {
+    if (!hasTenantScope(churchId)) {
+        cb([]);
+        return () => undefined;
+    }
     const q = query(collection(db, getCollectionPath('attendanceRecords', churchId)), orderBy('date', 'desc'));
     return onSnapshot(q, (snap: QuerySnapshot<DocumentData>) => {
         cb(snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<AttendanceRecord, 'id'>) })));
@@ -222,6 +250,7 @@ export function getTodayDate(): string {
 }
 
 export async function getStudentAttendance(studentId: string, churchId?: string): Promise<AttendanceRecord[]> {
+    if (!hasTenantScope(churchId)) return [];
     const q = query(collection(db, getCollectionPath('attendanceRecords', churchId)), where('studentId', '==', studentId));
     const snapshot = await getDocs(q);
     return snapshot.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<AttendanceRecord, 'id'>) }));
@@ -238,6 +267,10 @@ export interface SpotlightData {
 }
 
 export function subscribeSpotlight(cb: (data: SpotlightData | null) => void, churchId?: string) {
+    if (!hasTenantScope(churchId)) {
+        cb(null);
+        return () => undefined;
+    }
     return onSnapshot(doc(db, getSpotlightDocPath(churchId)), (snap) => {
         if (!snap.exists()) { cb(null); return; }
         cb(snap.data() as SpotlightData);
@@ -245,6 +278,7 @@ export function subscribeSpotlight(cb: (data: SpotlightData | null) => void, chu
 }
 
 export async function clearSpotlight(churchId?: string) {
+    if (!hasTenantScope(churchId)) throw new Error('Active church is required before clearing spotlight.');
     await setDoc(doc(db, getSpotlightDocPath(churchId)), {
         ...getChurchMetadata(churchId),
         active: false,

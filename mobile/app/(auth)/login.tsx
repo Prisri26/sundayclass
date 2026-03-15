@@ -19,6 +19,7 @@ import { StatusBar } from 'expo-status-bar';
 import { Feather } from '@expo/vector-icons';
 import { useChurchBranding } from '../../hooks/useChurchBranding';
 import { getBrandPalette } from '../../lib/branding';
+import { getBootstrapChurchId } from '../../lib/platform';
 
 function InputField({
     label,
@@ -59,7 +60,7 @@ function InputField({
 }
 
 export default function LoginScreen() {
-    const { branding } = useChurchBranding();
+    const { branding } = useChurchBranding(getBootstrapChurchId());
     const palette = getBrandPalette(branding);
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');

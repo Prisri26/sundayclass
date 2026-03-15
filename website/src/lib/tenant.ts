@@ -3,12 +3,11 @@ import {
   doc,
   getDoc,
   getDocs,
-  onSnapshot,
   query,
+  serverTimestamp,
+  setDoc,
   where,
   Timestamp,
-  QuerySnapshot,
-  DocumentData,
 } from 'firebase/firestore';
 import { db } from './firebase';
 import { DEFAULT_CHURCH_ID } from './platform';
@@ -38,97 +37,100 @@ export interface UserChurchAccess {
   church: ChurchSummary;
 }
 
-async function enrichMemberships(snapshot: QuerySnapshot<DocumentData>) {
-  const memberships = snapshot.docs
-    .map((membershipDoc) => membershipDoc.data() as Membership)
-    .filter((membership) => membership.status === 'active' && membership.churchId);
+type UserProfile = {
+  email?: string;
+  displayName?: string;
+  defaultChurchId?: string;
+  churchIds?: string[];
+};
 
-  const uniqueChurchIds = [...new Set(memberships.map((membership) => membership.churchId))];
-  const churchEntries = await Promise.all(
+async function getUserProfile(userId: string): Promise<UserProfile | null> {
+  const snap = await getDoc(doc(db, 'users', userId));
+  return snap.exists() ? (snap.data() as UserProfile) : null;
+}
+
+async function getChurchSummary(churchId: string): Promise<ChurchSummary | null> {
+  const churchSnap = await getDoc(doc(db, 'churches', churchId));
+  if (!churchSnap.exists()) return null;
+  const data = churchSnap.data() as Omit<ChurchSummary, 'id'>;
+  return {
+    id: churchSnap.id,
+    name: data.name,
+    slug: data.slug,
+    plan: data.plan,
+    status: data.status,
+  };
+}
+
+async function getAccessForChurchIds(userId: string, churchIds: string[]): Promise<UserChurchAccess[]> {
+  const uniqueChurchIds = [...new Set(churchIds.filter(Boolean))];
+  if (uniqueChurchIds.length === 0) return [];
+
+  const results = await Promise.all(
     uniqueChurchIds.map(async (churchId) => {
-      const churchSnap = await getDoc(doc(db, 'churches', churchId));
-      if (!churchSnap.exists()) return null;
-      const data = churchSnap.data() as Omit<ChurchSummary, 'id'>;
-      const church: ChurchSummary = {
-        id: churchSnap.id,
-        name: data.name,
-        slug: data.slug,
-        plan: data.plan,
-        status: data.status,
-      };
-      return church;
+      const membershipSnap = await getDoc(doc(db, `churches/${churchId}/members/${userId}`));
+      if (!membershipSnap.exists()) return null;
+
+      const membership = membershipSnap.data() as Membership;
+      if (membership.status !== 'active' || membership.churchId !== churchId) {
+        return null;
+      }
+
+      const church = await getChurchSummary(churchId);
+      if (!church) return null;
+
+      return { membership, church };
     })
   );
 
-  const churchMap = new Map<string, ChurchSummary>();
-  churchEntries.forEach((church) => {
-    if (church) {
-      churchMap.set(church.id, church);
-    }
-  });
-
-  const access: UserChurchAccess[] = [];
-  memberships.forEach((membership) => {
-    const church = churchMap.get(membership.churchId);
-    if (church) {
-      access.push({ membership, church });
-    }
-  });
-
-  return access;
+  return results.filter((entry): entry is UserChurchAccess => !!entry);
 }
 
-export function subscribeUserChurchAccess(
-  userId: string,
-  cb: (access: UserChurchAccess[]) => void,
-  onError?: (error: Error) => void
-) {
+async function discoverChurchIdsFromMemberships(userId: string): Promise<string[]> {
   const membershipsQuery = query(collectionGroup(db, 'members'), where('userId', '==', userId));
-  return onSnapshot(
-    membershipsQuery,
-    async (snapshot) => {
-      try {
-        cb(await enrichMemberships(snapshot));
-      } catch (error) {
-        onError?.(error as Error);
-      }
-    },
-    (error) => onError?.(error)
-  );
+  const snapshot = await getDocs(membershipsQuery);
+
+  return snapshot.docs
+    .map((entry) => entry.data() as Membership)
+    .filter((membership) => membership.status === 'active' && membership.churchId)
+    .map((membership) => membership.churchId);
+}
+
+export async function syncUserChurchAccessProfile(
+  userId: string,
+  access: UserChurchAccess[],
+  profile?: { email?: string | null; displayName?: string | null }
+) {
+  if (access.length === 0) return;
+
+  const churchIds = [...new Set(access.map((entry) => entry.church.id))];
+  await setDoc(doc(db, 'users', userId), {
+    email: profile?.email || '',
+    displayName: profile?.displayName || '',
+    defaultChurchId: churchIds[0],
+    churchIds,
+    updatedAt: serverTimestamp(),
+    createdAt: serverTimestamp(),
+  }, { merge: true });
 }
 
 export async function getUserChurchAccess(userId: string): Promise<UserChurchAccess[]> {
-  const membershipsQuery = query(collectionGroup(db, 'members'), where('userId', '==', userId));
-  const snapshot = await getDocs(membershipsQuery);
-  return enrichMemberships(snapshot);
-}
+  const userProfile = await getUserProfile(userId);
+  const profileChurchIds = [
+    ...(userProfile?.defaultChurchId ? [userProfile.defaultChurchId] : []),
+    ...((userProfile?.churchIds ?? []).filter(Boolean)),
+  ];
 
-export async function getDirectChurchAccess(
-  userId: string,
-  churchId = DEFAULT_CHURCH_ID
-): Promise<UserChurchAccess[]> {
-  if (!churchId) return [];
+  let access = await getAccessForChurchIds(userId, profileChurchIds);
+  if (access.length > 0) return access;
 
-  const membershipSnap = await getDoc(doc(db, `churches/${churchId}/members/${userId}`));
-  if (!membershipSnap.exists()) return [];
+  const discoveredChurchIds = await discoverChurchIdsFromMemberships(userId);
+  access = await getAccessForChurchIds(userId, discoveredChurchIds);
+  if (access.length > 0) return access;
 
-  const membership = membershipSnap.data() as Membership;
-  if (membership.status !== 'active' || membership.churchId !== churchId) {
-    return [];
+  if (DEFAULT_CHURCH_ID) {
+    return getAccessForChurchIds(userId, [DEFAULT_CHURCH_ID]);
   }
 
-  const churchSnap = await getDoc(doc(db, 'churches', churchId));
-  if (!churchSnap.exists()) return [];
-
-  const churchData = churchSnap.data() as Omit<ChurchSummary, 'id'>;
-  return [{
-    membership,
-    church: {
-      id: churchSnap.id,
-      name: churchData.name,
-      slug: churchData.slug,
-      plan: churchData.plan,
-      status: churchData.status,
-    },
-  }];
+  return [];
 }
