@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { Suspense, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { addOnboardingCenter, setOnboardingState } from '../../../lib/onboarding';
 
@@ -14,7 +14,7 @@ const emptyForm = {
 
 type CenterDraft = typeof emptyForm & { id: string };
 
-export default function CentersOnboardingPage() {
+function CentersOnboardingContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const churchId = searchParams.get('church') || '';
@@ -113,7 +113,7 @@ export default function CentersOnboardingPage() {
                     <button type="button" className="btn btn-primary" onClick={addDraftCenter}>Add Center</button>
                 </div>
 
-                {centers.length > 0 && (
+                {centers.length > 0 ? (
                     <div style={{ display: 'grid', gap: 12, marginBottom: 18 }}>
                         {centers.map((center) => (
                             <div key={center.id} className="card" style={{ padding: 18, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 16 }}>
@@ -129,17 +129,17 @@ export default function CentersOnboardingPage() {
                             </div>
                         ))}
                     </div>
-                )}
+                ) : null}
 
                 <div className="onboarding-note">
                     You can skip this and add centers later. A default `Church` center already exists so the app can still work.
                 </div>
 
-                {error && (
+                {error ? (
                     <div style={{ background: '#FEE2E2', color: '#991B1B', padding: '10px 14px', borderRadius: '8px', fontSize: '13px', marginBottom: '16px' }}>
                         {error}
                     </div>
-                )}
+                ) : null}
 
                 <div style={{ display: 'flex', gap: 12, justifyContent: 'space-between', flexWrap: 'wrap' }}>
                     <button type="button" className="btn btn-ghost" onClick={() => finishSetup(true)} disabled={saving}>
@@ -151,5 +151,13 @@ export default function CentersOnboardingPage() {
                 </div>
             </div>
         </div>
+    );
+}
+
+export default function CentersOnboardingPage() {
+    return (
+        <Suspense fallback={<div className="loading-page"><div className="spinner" /></div>}>
+            <CentersOnboardingContent />
+        </Suspense>
     );
 }

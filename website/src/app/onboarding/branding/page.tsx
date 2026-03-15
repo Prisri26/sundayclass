@@ -1,5 +1,5 @@
 'use client';
-import { useMemo, useState } from 'react';
+import { Suspense, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { uploadToCloudinary } from '../../../lib/api';
 import { saveBrandingSetup } from '../../../lib/onboarding';
@@ -8,7 +8,7 @@ const DEFAULT_PRIMARY = '#4F46E5';
 const DEFAULT_SECONDARY = '#3730A3';
 const DEFAULT_ACCENT = '#10B981';
 
-export default function BrandingOnboardingPage() {
+function BrandingOnboardingContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const churchId = searchParams.get('church') || '';
@@ -97,11 +97,11 @@ export default function BrandingOnboardingPage() {
                 <div className="form-group">
                     <label className="form-label">Church Logo</label>
                     <input type="file" accept="image/*" className="form-input" onChange={handleLogoChange} />
-                    {logoPreview && (
+                    {logoPreview ? (
                         <div style={{ marginTop: 12 }}>
                             <img src={logoPreview} alt="Logo preview" style={{ width: 84, height: 84, objectFit: 'cover', borderRadius: 18, border: '1px solid var(--border)' }} />
                         </div>
-                    )}
+                    ) : null}
                 </div>
 
                 <div className="form-row">
@@ -135,11 +135,11 @@ export default function BrandingOnboardingPage() {
                     Logo upload uses Cloudinary and your chosen colors will later be used across web and mobile.
                 </div>
 
-                {error && (
+                {error ? (
                     <div style={{ background: '#FEE2E2', color: '#991B1B', padding: '10px 14px', borderRadius: '8px', fontSize: '13px', marginBottom: '16px' }}>
                         {error}
                     </div>
-                )}
+                ) : null}
 
                 <div style={{ display: 'flex', gap: 12, justifyContent: 'space-between', flexWrap: 'wrap' }}>
                     <button type="button" className="btn btn-ghost" onClick={() => handleSave(true)}>
@@ -151,5 +151,13 @@ export default function BrandingOnboardingPage() {
                 </div>
             </div>
         </div>
+    );
+}
+
+export default function BrandingOnboardingPage() {
+    return (
+        <Suspense fallback={<div className="loading-page"><div className="spinner" /></div>}>
+            <BrandingOnboardingContent />
+        </Suspense>
     );
 }
