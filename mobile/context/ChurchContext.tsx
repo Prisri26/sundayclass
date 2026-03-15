@@ -1,6 +1,6 @@
 import React, { createContext, ReactNode, useContext, useEffect, useMemo, useState } from 'react';
 import { onAuthStateChanged } from 'firebase/auth';
-import { DEFAULT_CHURCH_ID, MULTI_TENANT_ENABLED, getBootstrapChurchId } from '../lib/platform';
+import { MULTI_TENANT_ENABLED } from '../lib/platform';
 import { auth } from '../lib/firebase';
 import { ChurchSummary, Membership, getUserChurchAccess, syncUserChurchAccessProfile } from '../lib/tenant';
 
@@ -16,7 +16,7 @@ type ChurchContextValue = {
 };
 
 const ChurchContext = createContext<ChurchContextValue>({
-  activeChurchId: DEFAULT_CHURCH_ID || null,
+  activeChurchId: null,
   activeChurch: null,
   activeMembership: null,
   availableChurches: [],
@@ -27,7 +27,7 @@ const ChurchContext = createContext<ChurchContextValue>({
 });
 
 export function ChurchProvider({ children }: { children: ReactNode }) {
-  const [activeChurchId, setActiveChurchId] = useState<string | null>(DEFAULT_CHURCH_ID || null);
+  const [activeChurchId, setActiveChurchId] = useState<string | null>(null);
   const [availableChurches, setAvailableChurches] = useState<ChurchSummary[]>([]);
   const [memberships, setMemberships] = useState<Membership[]>([]);
   const [loading, setLoading] = useState<boolean>(MULTI_TENANT_ENABLED);
@@ -42,7 +42,7 @@ export function ChurchProvider({ children }: { children: ReactNode }) {
       if (!user) {
         setAvailableChurches([]);
         setMemberships([]);
-        setActiveChurchId(getBootstrapChurchId());
+        setActiveChurchId(null);
         setLoading(false);
         return;
       }
@@ -63,46 +63,20 @@ export function ChurchProvider({ children }: { children: ReactNode }) {
               if (current && nextChurches.some((church) => church.id === current)) {
                 return current;
               }
-              return nextChurches[0]?.id ?? getBootstrapChurchId();
+              return nextChurches[0]?.id ?? null;
             });
             setLoading(false);
             return;
           }
 
-          const bootstrapChurchId = getBootstrapChurchId();
-          if (bootstrapChurchId) {
-            setAvailableChurches([
-              {
-                id: bootstrapChurchId,
-                name: 'Church Workspace',
-                slug: bootstrapChurchId,
-                status: 'active',
-              },
-            ]);
-            setActiveChurchId(bootstrapChurchId);
-          } else {
-            setAvailableChurches([]);
-            setActiveChurchId(null);
-          }
+          setAvailableChurches([]);
+          setActiveChurchId(null);
           setMemberships([]);
           setLoading(false);
         })
         .catch(() => {
-          const bootstrapChurchId = getBootstrapChurchId();
-          if (bootstrapChurchId) {
-            setAvailableChurches([
-              {
-                id: bootstrapChurchId,
-                name: 'Church Workspace',
-                slug: bootstrapChurchId,
-                status: 'active',
-              },
-            ]);
-            setActiveChurchId(bootstrapChurchId);
-          } else {
-            setAvailableChurches([]);
-            setActiveChurchId(null);
-          }
+          setAvailableChurches([]);
+          setActiveChurchId(null);
           setMemberships([]);
           setLoading(false);
         });

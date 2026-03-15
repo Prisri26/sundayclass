@@ -2,7 +2,7 @@
 
 import { createContext, ReactNode, useContext, useEffect, useMemo, useState } from 'react';
 import { usePathname } from 'next/navigation';
-import { DEFAULT_CHURCH_ID, MULTI_TENANT_ENABLED, getBootstrapChurchId } from '../lib/platform';
+import { MULTI_TENANT_ENABLED, getBootstrapChurchId } from '../lib/platform';
 import { useAuth } from './AuthContext';
 import { ChurchSummary, Membership, getUserChurchAccess, syncUserChurchAccessProfile } from '../lib/tenant';
 import { BrandingSettings, getChurchBranding } from '../lib/branding';
@@ -20,7 +20,7 @@ type ChurchContextValue = {
 };
 
 const ChurchContext = createContext<ChurchContextValue>({
-  activeChurchId: DEFAULT_CHURCH_ID || null,
+  activeChurchId: null,
   activeChurch: null,
   activeMembership: null,
   branding: null,
@@ -34,7 +34,7 @@ const ChurchContext = createContext<ChurchContextValue>({
 export function ChurchProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
   const pathname = usePathname();
-  const [activeChurchId, setActiveChurchId] = useState<string | null>(DEFAULT_CHURCH_ID || null);
+  const [activeChurchId, setActiveChurchId] = useState<string | null>(null);
   const [availableChurches, setAvailableChurches] = useState<ChurchSummary[]>([]);
   const [memberships, setMemberships] = useState<Membership[]>([]);
   const [branding, setBranding] = useState<BrandingSettings | null>(null);

@@ -10,8 +10,6 @@ import {
   Timestamp,
 } from 'firebase/firestore';
 import { db } from './firebase';
-import { DEFAULT_CHURCH_ID } from './platform';
-
 export interface Membership {
   userId: string;
   churchId: string;
@@ -127,10 +125,6 @@ export async function getUserChurchAccess(userId: string): Promise<UserChurchAcc
   const discoveredChurchIds = await discoverChurchIdsFromMemberships(userId);
   access = await getAccessForChurchIds(userId, discoveredChurchIds);
   if (access.length > 0) return access;
-
-  if (DEFAULT_CHURCH_ID) {
-    return getAccessForChurchIds(userId, [DEFAULT_CHURCH_ID]);
-  }
 
   return [];
 }
