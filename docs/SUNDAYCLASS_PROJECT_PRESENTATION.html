@@ -1,0 +1,635 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sundayclass Project Presentation</title>
+  <style>
+    :root {
+      --ink: #10203a;
+      --muted: #5c6b86;
+      --line: #d8e1ef;
+      --surface: #ffffff;
+      --bg: #eef4fb;
+      --brand: #143c7d;
+      --brand-dark: #0d244f;
+      --accent: #d59129;
+      --accent-soft: #fff2d9;
+      --success: #12825f;
+      --danger: #c24b5d;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: "Aptos", "Segoe UI", sans-serif;
+      background:
+        radial-gradient(circle at top left, rgba(20, 60, 125, 0.08), transparent 28%),
+        radial-gradient(circle at bottom right, rgba(213, 145, 41, 0.12), transparent 26%),
+        var(--bg);
+      color: var(--ink);
+    }
+
+    .deck {
+      width: min(1120px, calc(100vw - 48px));
+      margin: 24px auto 60px;
+      display: grid;
+      gap: 28px;
+    }
+
+    .slide {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 30px;
+      min-height: 720px;
+      padding: 44px 48px;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 18px 48px rgba(16, 32, 58, 0.08);
+    }
+
+    .slide::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(circle at top right, rgba(20, 60, 125, 0.08), transparent 24%),
+        radial-gradient(circle at bottom left, rgba(213, 145, 41, 0.08), transparent 24%);
+      pointer-events: none;
+    }
+
+    .slide > * {
+      position: relative;
+      z-index: 1;
+    }
+
+    .cover {
+      background:
+        radial-gradient(circle at top right, rgba(255,255,255,0.12), transparent 28%),
+        linear-gradient(135deg, var(--brand-dark), var(--brand));
+      color: white;
+      border: 0;
+    }
+
+    .cover::before {
+      display: none;
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 16px;
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      background: rgba(20, 60, 125, 0.08);
+      color: var(--brand);
+    }
+
+    .cover .eyebrow {
+      background: rgba(255,255,255,0.12);
+      color: rgba(255,255,255,0.92);
+    }
+
+    h1 {
+      margin: 18px 0 10px;
+      font-size: 54px;
+      line-height: 1.05;
+      letter-spacing: -0.04em;
+    }
+
+    h2 {
+      margin: 18px 0 10px;
+      font-size: 34px;
+      line-height: 1.12;
+      letter-spacing: -0.03em;
+    }
+
+    h3 {
+      margin: 0 0 10px;
+      font-size: 20px;
+      line-height: 1.2;
+      letter-spacing: -0.02em;
+    }
+
+    p, li {
+      font-size: 18px;
+      line-height: 1.65;
+      color: var(--muted);
+    }
+
+    .cover p,
+    .cover li {
+      color: rgba(255,255,255,0.86);
+    }
+
+    .lede {
+      max-width: 860px;
+      font-size: 20px;
+      line-height: 1.7;
+    }
+
+    .two-col,
+    .three-col {
+      display: grid;
+      gap: 18px;
+      margin-top: 22px;
+    }
+
+    .two-col {
+      grid-template-columns: 1.2fr 0.8fr;
+    }
+
+    .three-col {
+      grid-template-columns: repeat(3, 1fr);
+    }
+
+    .card {
+      background: #f8fbff;
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      padding: 20px 22px;
+    }
+
+    .card strong,
+    .metric strong {
+      color: var(--ink);
+    }
+
+    .metric-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 14px;
+      margin-top: 24px;
+    }
+
+    .metric {
+      background: #f8fbff;
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      padding: 18px 18px 20px;
+    }
+
+    .metric-value {
+      font-size: 34px;
+      font-weight: 800;
+      line-height: 1;
+      color: var(--brand);
+      margin: 12px 0 8px;
+    }
+
+    .tag-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 18px;
+    }
+
+    .tag {
+      padding: 8px 12px;
+      border-radius: 999px;
+      font-size: 14px;
+      font-weight: 700;
+      background: #edf3ff;
+      color: var(--brand);
+    }
+
+    .tag.accent {
+      background: var(--accent-soft);
+      color: #915f12;
+    }
+
+    .tag.success {
+      background: #e7f7f1;
+      color: var(--success);
+    }
+
+    .flow {
+      display: grid;
+      gap: 12px;
+      margin-top: 18px;
+    }
+
+    .flow-step {
+      display: flex;
+      gap: 14px;
+      align-items: flex-start;
+      background: #f8fbff;
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      padding: 16px 18px;
+    }
+
+    .flow-num {
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      background: var(--brand);
+      color: white;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      flex: 0 0 auto;
+    }
+
+    .diagram {
+      margin-top: 20px;
+      padding: 22px;
+      border-radius: 24px;
+      background: #f8fbff;
+      border: 1px solid var(--line);
+      font-size: 16px;
+      line-height: 1.7;
+      color: var(--ink);
+      white-space: pre-line;
+    }
+
+    .phase-list {
+      display: grid;
+      gap: 14px;
+      margin-top: 20px;
+    }
+
+    .phase {
+      border-left: 5px solid var(--brand);
+      background: #f8fbff;
+      border-radius: 0 18px 18px 0;
+      padding: 16px 18px;
+    }
+
+    .phase small {
+      display: block;
+      color: var(--brand);
+      font-size: 13px;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+
+    .footer-note {
+      margin-top: 24px;
+      font-size: 14px;
+      color: var(--muted);
+    }
+
+    ul {
+      margin: 12px 0 0 22px;
+      padding: 0;
+    }
+
+    @media print {
+      body {
+        background: white;
+      }
+
+      .deck {
+        width: auto;
+        margin: 0;
+        gap: 0;
+      }
+
+      .slide {
+        min-height: auto;
+        page-break-after: always;
+        box-shadow: none;
+        border-radius: 0;
+        border: 0;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="deck">
+    <section class="slide cover">
+      <div class="eyebrow">Sundayclass Project Presentation</div>
+      <h1>Multi-Tenant White-Label Church Platform</h1>
+      <p class="lede">
+        Sundayclass is evolving from a single-church Sunday school attendance app into a branded multi-tenant platform for churches, centers, teachers, and ministry teams.
+      </p>
+      <div class="metric-grid">
+        <div class="metric">
+          <div class="metric-value">Web</div>
+          <p>Church admin dashboard, onboarding, reporting, members, centers</p>
+        </div>
+        <div class="metric">
+          <div class="metric-value">Mobile</div>
+          <p>Attendance, student registration, spotlight, branded runtime experience</p>
+        </div>
+        <div class="metric">
+          <div class="metric-value">Multi-Tenant</div>
+          <p>Church-based data isolation, roles, memberships, white-label settings</p>
+        </div>
+        <div class="metric">
+          <div class="metric-value">White-Label</div>
+          <p>Logo, colors, welcome content, future premium custom app branding</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide">
+      <div class="eyebrow">Project Overview</div>
+      <h2>What Sundayclass Solves</h2>
+      <div class="two-col">
+        <div class="card">
+          <h3>Operational problem</h3>
+          <ul>
+            <li>Churches need a simple system to manage Sunday class students, centers, attendance, and teacher workflows.</li>
+            <li>Existing flows are often manual, inconsistent, and not built around real ministry structures.</li>
+            <li>Many churches conduct classes both at church level and at local house-based area centers.</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3>Product answer</h3>
+          <ul>
+            <li>One platform for many churches</li>
+            <li>Each church has isolated data and branding</li>
+            <li>Supports church-level class and many centers like A1, A2, A3</li>
+            <li>Mobile-first attendance and admin-ready reporting</li>
+          </ul>
+        </div>
+      </div>
+      <div class="tag-row">
+        <span class="tag">Church Admin</span>
+        <span class="tag">Teacher</span>
+        <span class="tag">Volunteer</span>
+        <span class="tag accent">Center-Based Ministry</span>
+        <span class="tag success">White-Label SaaS</span>
+      </div>
+    </section>
+
+    <section class="slide">
+      <div class="eyebrow">Vision</div>
+      <h2>Target Product Direction</h2>
+      <div class="diagram">Platform
+  -> Churches
+      -> Branding
+      -> Members
+      -> Centers
+      -> Students
+      -> Attendance
+      -> Spotlight
+      -> Reports
+      -> Settings
+
+Church
+  -> Church-level Sunday class
+  -> Area centers (A1, A2, A3...)
+  -> Teachers / volunteers
+  -> Students by center
+  -> Attendance by center
+      </div>
+      <div class="footer-note">
+        Final runtime behavior should be membership-driven: after login, the app resolves the correct church from the user’s UID and membership data, not from a hardcoded env church.
+      </div>
+    </section>
+
+    <section class="slide">
+      <div class="eyebrow">Architecture</div>
+      <h2>Core System Flow</h2>
+      <div class="flow">
+        <div class="flow-step">
+          <div class="flow-num">1</div>
+          <div>
+            <strong>User logs in</strong>
+            <p>Firebase Authentication identifies the user by UID.</p>
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-num">2</div>
+          <div>
+            <strong>Membership resolves church</strong>
+            <p>The app reads `users/{uid}` and `churches/{churchId}/members/{uid}` to determine church access and role.</p>
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-num">3</div>
+          <div>
+            <strong>Branding loads dynamically</strong>
+            <p>Church branding comes from `churches/{churchId}/settings/branding` and applies across web and mobile.</p>
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-num">4</div>
+          <div>
+            <strong>Church-scoped data loads</strong>
+            <p>Students, attendance, spotlight, and centers come only from `churches/{churchId}/...` collections.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide">
+      <div class="eyebrow">Current Progress</div>
+      <h2>What Has Already Been Implemented</h2>
+      <div class="three-col">
+        <div class="card">
+          <h3>Platform Foundation</h3>
+          <ul>
+            <li>Multi-tenant Firestore model</li>
+            <li>Membership-driven access</li>
+            <li>Tenant-aware web and mobile data paths</li>
+            <li>Roadmaps and architecture docs</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3>White-Label Flow</h3>
+          <ul>
+            <li>Church self-onboarding</li>
+            <li>Branding setup</li>
+            <li>Centers onboarding</li>
+            <li>Branding applied on web and mobile</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3>UI Progress</h3>
+          <ul>
+            <li>Website shell redesign</li>
+            <li>Mobile premium pass</li>
+            <li>Collapsing mobile attendance header</li>
+            <li>Spotlight and feedback-state polish</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide">
+      <div class="eyebrow">User Roles</div>
+      <h2>Who Uses the Product</h2>
+      <div class="two-col">
+        <div class="card">
+          <h3>Church Admin</h3>
+          <ul>
+            <li>Creates church workspace</li>
+            <li>Sets branding and centers</li>
+            <li>Adds members and students</li>
+            <li>Views reports and operational data</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3>Teacher / Volunteer</h3>
+          <ul>
+            <li>Logs in on mobile</li>
+            <li>Views assigned church and center</li>
+            <li>Marks attendance</li>
+            <li>Adds or updates students if permitted</li>
+            <li>Uses spotlight for student recognition</li>
+          </ul>
+        </div>
+      </div>
+      <div class="tag-row">
+        <span class="tag">Platform Admin</span>
+        <span class="tag">Church Admin</span>
+        <span class="tag">Teacher</span>
+        <span class="tag">Volunteer</span>
+        <span class="tag">Viewer</span>
+      </div>
+    </section>
+
+    <section class="slide">
+      <div class="eyebrow">User Stories</div>
+      <h2>Representative Product User Stories</h2>
+      <div class="three-col">
+        <div class="card">
+          <h3>Onboarding</h3>
+          <ul>
+            <li>As a church admin, I want to create my own church workspace so I do not depend on platform support.</li>
+            <li>As a church admin, I want to upload branding so the product feels like my church.</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3>Operations</h3>
+          <ul>
+            <li>As a teacher, I want to mark attendance quickly on mobile.</li>
+            <li>As a church admin, I want to manage students and centers clearly.</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3>Growth</h3>
+          <ul>
+            <li>As a church admin, I want absent-student follow-up tools.</li>
+            <li>As a premium client, I want deeper white-label branding later.</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide">
+      <div class="eyebrow">Storage Strategy</div>
+      <h2>Recommended Backend Direction</h2>
+      <div class="two-col">
+        <div class="card">
+          <h3>Recommended for now</h3>
+          <ul>
+            <li>Firebase Auth</li>
+            <li>Firestore</li>
+            <li>Keep current media flow stable first</li>
+            <li>Do not migrate storage until platform behavior is validated end to end</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3>Why not change now?</h3>
+          <ul>
+            <li>Storage migration adds risk before tenant architecture is fully stabilized.</li>
+            <li>The higher priority is runtime church resolution, memberships, data cleanup, and operational testing.</li>
+            <li>Storage can be standardized later without changing product direction.</li>
+          </ul>
+        </div>
+      </div>
+      <div class="footer-note">
+        Recommendation: stabilize the product foundation first, then decide whether to standardize on Firebase Storage or retain a separate media delivery path.
+      </div>
+    </section>
+
+    <section class="slide">
+      <div class="eyebrow">Roadmap</div>
+      <h2>Execution Roadmap</h2>
+      <div class="phase-list">
+        <div class="phase">
+          <small>Phase 1</small>
+          <strong>Foundation Stabilization</strong>
+          <p>Dynamic church resolution, tenant-only reads, rules tightening, legacy fallback cleanup.</p>
+        </div>
+        <div class="phase">
+          <small>Phase 2</small>
+          <strong>White-Label Onboarding</strong>
+          <p>Church signup, workspace creation, branding, centers, skippable onboarding completion.</p>
+        </div>
+        <div class="phase">
+          <small>Phase 3</small>
+          <strong>Member Experience</strong>
+          <p>UID guidance, role assignment, center assignment, clearer church access onboarding.</p>
+        </div>
+        <div class="phase">
+          <small>Phase 4</small>
+          <strong>Core Operations</strong>
+          <p>Centers, students, attendance, reports, spotlight, church-level and center-level flows.</p>
+        </div>
+        <div class="phase">
+          <small>Phase 5</small>
+          <strong>UI and Design System</strong>
+          <p>Premium mobile and web shell, white-label consistency, better states and interactions.</p>
+        </div>
+        <div class="phase">
+          <small>Phase 6</small>
+          <strong>Advanced Modules</strong>
+          <p>Follow-up, birthdays, announcements, events, exports, premium white-label build tier.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide">
+      <div class="eyebrow">Immediate Next Steps</div>
+      <h2>What Needs Focus Right Now</h2>
+      <div class="three-col">
+        <div class="card">
+          <h3>Validate Foundation</h3>
+          <ul>
+            <li>Church admin login</li>
+            <li>Member login</li>
+            <li>Correct church resolution</li>
+            <li>No wrong-student leakage</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3>Clean Data</h3>
+          <ul>
+            <li>Finish student-center cleanup</li>
+            <li>Verify `churches/{churchId}/...` only</li>
+            <li>Retire legacy shared collections when safe</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3>Prepare Growth</h3>
+          <ul>
+            <li>Continue mobile design-system cleanup</li>
+            <li>Finalize staging workflow</li>
+            <li>Then start advanced modules</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide cover">
+      <div class="eyebrow">Closing</div>
+      <h1>Sundayclass is now positioned as a scalable church platform.</h1>
+      <p class="lede">
+        The next milestone is not more random features. It is validating the multi-tenant, white-label foundation thoroughly, then expanding into advanced ministry modules on a stable base.
+      </p>
+      <div class="tag-row">
+        <span class="tag">Multi-Tenant</span>
+        <span class="tag accent">White-Label</span>
+        <span class="tag success">Mobile + Web</span>
+        <span class="tag">Church-Centered</span>
+      </div>
+    </section>
+  </main>
+</body>
+</html>
