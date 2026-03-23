@@ -1,6 +1,7 @@
 'use client';
 
 import {
+  arrayUnion,
   collection,
   doc,
   onSnapshot,
@@ -51,15 +52,27 @@ export function subscribeMembers(
 }
 
 export async function upsertMember(churchId: string, input: UpsertMemberInput) {
-  const ref = doc(db, `churches/${churchId}/members`, input.userId.trim());
+  const userId = input.userId.trim();
+  const ref = doc(db, `churches/${churchId}/members`, userId);
+  const userRef = doc(db, 'users', userId);
+
   await setDoc(ref, {
-    userId: input.userId.trim(),
+    userId,
     churchId,
     email: input.email?.trim() || '',
     displayName: input.displayName?.trim() || '',
     role: input.role,
     status: input.status,
     centerIds: input.centerIds,
+    updatedAt: Timestamp.now(),
+    createdAt: Timestamp.now(),
+  }, { merge: true });
+
+  await setDoc(userRef, {
+    email: input.email?.trim() || '',
+    displayName: input.displayName?.trim() || '',
+    defaultChurchId: churchId,
+    churchIds: arrayUnion(churchId),
     updatedAt: Timestamp.now(),
     createdAt: Timestamp.now(),
   }, { merge: true });

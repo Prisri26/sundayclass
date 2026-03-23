@@ -66,7 +66,7 @@ export default function SpotlightScreen() {
         try {
             const photo = await cameraRef.current.takePictureAsync({ quality: 0.75, base64: false });
             if (!photo?.uri) throw new Error('No photo');
-            const url = await uploadStudentPhoto(photo.uri, studentName ?? 'Student');
+            const url = await uploadStudentPhoto(photo.uri, studentName ?? 'Student', activeChurchId ?? undefined);
             await setSpotlight(studentId ?? '', studentName ?? '', url, scopedChurchId);
             setDone(true);
         } catch (err: any) {

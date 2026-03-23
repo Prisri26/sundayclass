@@ -27,8 +27,8 @@ import { getBrandPalette } from '../../lib/branding';
 
 type AttendanceMap = Record<string, 'present' | 'absent'>;
 
-const HERO_MAX_HEIGHT = 340;
-const HERO_MIN_HEIGHT = 124;
+const HERO_MAX_HEIGHT = 292;
+const HERO_MIN_HEIGHT = 114;
 
 function isBirthdayComingUp(dobStr?: string): boolean {
     if (!dobStr) return false;
@@ -114,7 +114,7 @@ export default function AttendanceScreen() {
     });
     const floatingTranslateY = scrollY.interpolate({
         inputRange: [0, 220],
-        outputRange: [0, -16],
+        outputRange: [0, -6],
         extrapolate: 'clamp',
     });
 
@@ -397,7 +397,7 @@ export default function AttendanceScreen() {
 
             <Animated.ScrollView
                 style={styles.content}
-                contentContainerStyle={[styles.contentInner, { paddingTop: HERO_MAX_HEIGHT - 92 }]}
+                contentContainerStyle={[styles.contentInner, { paddingTop: HERO_MAX_HEIGHT + 10 }]}
                 showsVerticalScrollIndicator={false}
                 scrollEventThrottle={16}
                 onScroll={Animated.event(
@@ -556,8 +556,8 @@ const styles = StyleSheet.create({
         right: 0,
         zIndex: 3,
         paddingHorizontal: Spacing.lg,
-        borderBottomLeftRadius: 36,
-        borderBottomRightRadius: 36,
+        borderBottomLeftRadius: 30,
+        borderBottomRightRadius: 30,
         overflow: 'hidden',
     },
     heroSafeArea: {
@@ -581,7 +581,7 @@ const styles = StyleSheet.create({
     },
     heroCompactBar: {
         minHeight: 60,
-        paddingTop: 8,
+        paddingTop: 6,
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
@@ -625,8 +625,8 @@ const styles = StyleSheet.create({
     heroExpanded: {
         flex: 1,
         justifyContent: 'flex-end',
-        paddingTop: 12,
-        paddingBottom: 34,
+        paddingTop: 6,
+        paddingBottom: 18,
     },
     heroTopRow: {
         flexDirection: 'row',
@@ -643,23 +643,23 @@ const styles = StyleSheet.create({
         fontWeight: '700',
         textTransform: 'uppercase',
         letterSpacing: 1.1,
-        marginBottom: 6,
+        marginBottom: 4,
     },
     heroTitle: {
         color: Colors.white,
-        fontSize: 31,
+        fontSize: 26,
         fontWeight: '800',
-        letterSpacing: -0.8,
+        letterSpacing: -0.7,
     },
     heroSubtitle: {
         color: 'rgba(255,255,255,0.86)',
-        fontSize: 14,
-        lineHeight: 20,
-        marginTop: 8,
-        maxWidth: 290,
+        fontSize: 12.5,
+        lineHeight: 18,
+        marginTop: 6,
+        maxWidth: 268,
     },
     churchPill: {
-        marginTop: 14,
+        marginTop: 12,
         alignSelf: 'flex-start',
         flexDirection: 'row',
         alignItems: 'center',
@@ -683,11 +683,11 @@ const styles = StyleSheet.create({
     heroSignalRow: {
         flexDirection: 'row',
         gap: 10,
-        marginTop: 16,
+        marginTop: 12,
     },
     heroSignalCard: {
         paddingHorizontal: 12,
-        paddingVertical: 10,
+        paddingVertical: 9,
         borderRadius: Radius.md,
         backgroundColor: 'rgba(255,255,255,0.12)',
     },
@@ -703,17 +703,17 @@ const styles = StyleSheet.create({
     },
     heroSignalValue: {
         color: Colors.white,
-        fontSize: 15,
+        fontSize: 14,
         fontWeight: '800',
-        marginTop: 5,
+        marginTop: 4,
     },
     heroIconButton: {
-        width: 46,
-        height: 46,
-        borderRadius: 18,
+        width: 42,
+        height: 42,
+        borderRadius: 16,
         alignItems: 'center',
         justifyContent: 'center',
-        marginTop: 12,
+        marginTop: 6,
     },
     content: {
         flex: 1,
@@ -723,7 +723,7 @@ const styles = StyleSheet.create({
         paddingBottom: 170,
     },
     floatingStage: {
-        marginBottom: Spacing.lg,
+        marginBottom: Spacing.md,
     },
     dateCard: {
         backgroundColor: Colors.white,
@@ -734,6 +734,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         borderWidth: 1,
         borderColor: Colors.border,
+        marginTop: 2,
     },
     dateCopy: {
         flex: 1,
@@ -776,7 +777,7 @@ const styles = StyleSheet.create({
     ribbonRow: {
         flexDirection: 'row',
         gap: 10,
-        marginTop: 14,
+        marginTop: 12,
     },
     ribbonCard: {
         flex: 1,

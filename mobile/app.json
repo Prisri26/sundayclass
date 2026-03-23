@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "Sunday School Attendance",
-    "slug": "sunday-school-attendance",
+    "name": "PrayLoom",
+    "slug": "prayloom",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -29,8 +29,8 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "Sunday School Attendance needs access to your photos to set student profile pictures.",
-          "cameraPermission": "Sunday School Attendance needs access to your camera to take student profile pictures."
+          "photosPermission": "PrayLoom needs access to your photos to set student profile pictures.",
+          "cameraPermission": "PrayLoom needs access to your camera to take student profile pictures."
         }
       ]
     ]

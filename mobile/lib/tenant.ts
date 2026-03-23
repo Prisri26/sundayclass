@@ -1,15 +1,12 @@
 import {
-  collectionGroup,
   doc,
   getDoc,
-  getDocs,
-  query,
   serverTimestamp,
   setDoc,
-  where,
   Timestamp,
 } from 'firebase/firestore';
 import { db } from './firebase';
+import { getBootstrapChurchId } from './platform';
 export interface Membership {
   userId: string;
   churchId: string;
@@ -84,16 +81,6 @@ async function getAccessForChurchIds(userId: string, churchIds: string[]): Promi
   return results.filter((entry): entry is UserChurchAccess => !!entry);
 }
 
-async function discoverChurchIdsFromMemberships(userId: string): Promise<string[]> {
-  const membershipsQuery = query(collectionGroup(db, 'members'), where('userId', '==', userId));
-  const snapshot = await getDocs(membershipsQuery);
-
-  return snapshot.docs
-    .map((entry) => entry.data() as Membership)
-    .filter((membership) => membership.status === 'active' && membership.churchId)
-    .map((membership) => membership.churchId);
-}
-
 export async function syncUserChurchAccessProfile(
   userId: string,
   access: UserChurchAccess[],
@@ -122,8 +109,8 @@ export async function getUserChurchAccess(userId: string): Promise<UserChurchAcc
   let access = await getAccessForChurchIds(userId, profileChurchIds);
   if (access.length > 0) return access;
 
-  const discoveredChurchIds = await discoverChurchIdsFromMemberships(userId);
-  access = await getAccessForChurchIds(userId, discoveredChurchIds);
+  const bootstrapChurchId = getBootstrapChurchId();
+  access = await getAccessForChurchIds(userId, bootstrapChurchId ? [bootstrapChurchId] : []);
   if (access.length > 0) return access;
 
   return [];

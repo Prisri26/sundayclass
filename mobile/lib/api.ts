@@ -15,9 +15,7 @@ import {
 } from 'firebase/firestore';
 import { db } from './firebase';
 import { getChurchMetadata, getCollectionPath, getSpotlightDocPath, MULTI_TENANT_ENABLED } from './platform';
-
-const CLOUDINARY_CLOUD_NAME = 'dcgh5awyn';
-const CLOUDINARY_UPLOAD_PRESET = 'sunday_school';
+import { uploadMobileImage } from './storage';
 
 export interface Student {
     id: string;
@@ -194,27 +192,14 @@ export async function saveSessionSummary(date: string, summary: string, churchId
 export const getClassSummary = getSessionSummary;
 export const saveClassSummary = saveSessionSummary;
 
-// Upload a student photo to Cloudinary (free, no Firebase Storage upgrade needed)
-export async function uploadStudentPhoto(localUri: string, _studentName: string): Promise<string> {
-    const formData = new FormData();
-    // React Native accepts { uri, type, name } object as FormData value
-    formData.append('file', {
-        uri: localUri,
-        type: 'image/jpeg',
-        name: `student_${Date.now()}.jpg`,
-    } as any);
-    formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
-
-    const response = await fetch(
-        `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`,
-        { method: 'POST', body: formData }
-    );
-    if (!response.ok) {
-        const err = await response.text();
-        throw new Error(`Cloudinary upload failed: ${err}`);
-    }
-    const data = await response.json();
-    return data.secure_url as string;
+// Upload a student photo to Firebase Storage
+export async function uploadStudentPhoto(localUri: string, studentName: string, churchId?: string): Promise<string> {
+    const scopedChurchId = churchId?.trim();
+    if (!scopedChurchId) throw new Error('Active church is required before uploading a photo.');
+    return uploadMobileImage(localUri, {
+        pathSegments: ['churches', scopedChurchId, 'students'],
+        fileName: studentName || 'student-photo',
+    });
 }
 
 // Get today's date as YYYY-MM-DD

@@ -12,7 +12,7 @@ import {
     updateStudent,
     deleteStudent,
     getStudentAttendance,
-    uploadToCloudinary,
+    uploadStudentPhoto,
     Student,
     AttendanceRecord,
     getStudentCenterLabel,
@@ -249,7 +249,7 @@ export default function StudentsPage() {
         try {
             let photoUrl: string | undefined;
             if (photoFile) {
-                photoUrl = await uploadToCloudinary(photoFile);
+                photoUrl = await uploadStudentPhoto(photoFile, activeChurchId ?? 'unscoped', form.name.trim());
             } else if (modal === 'edit' && photoPreview?.startsWith('http')) {
                 photoUrl = photoPreview;
             }
@@ -329,85 +329,60 @@ export default function StudentsPage() {
         <div className="app-layout">
             <Sidebar />
             <main className="main-content">
-                <section className="admin-hero">
-                    <div className="admin-hero-grid">
-                        <div>
-                            <div className="admin-hero-eyebrow">Student Directory</div>
-                            <div className="admin-hero-title">Keep every Sunday class student organized, visible, and ready for attendance</div>
-                            <div className="admin-hero-copy">
-                                Manage photos, center assignments, and attendance history from one place so teachers can work faster on Sunday.
-                            </div>
-                            <div className="admin-hero-actions">
-                                <div className="admin-hero-chip">👥 {students.length} registered students</div>
-                                <div className="admin-hero-chip">🏠 {centers.length} configured centers</div>
-                            </div>
+                <div className="studio-page">
+                <section className="studio-head">
+                    <div className="studio-head-copy">
+                        <div className="studio-kicker">Student directory</div>
+                        <h1 className="studio-title">Students</h1>
+                        <p className="studio-copy">Manage every student across your church centers with clear records, profile details, and attendance context.</p>
+                    </div>
+                    <div className="studio-head-actions">
+                        <div className="studio-search">
+                            <span>⌕</span>
+                            <input placeholder="Search by student name or center" value={search} onChange={e => setSearch(e.target.value)} />
                         </div>
-                        <div className="admin-hero-panel">
-                            <div className="admin-hero-panel-title">Student snapshot</div>
-                            <div className="admin-hero-panel-list">
-                                <div className="admin-hero-panel-item">
-                                    <div className="admin-hero-panel-label">Visible now</div>
-                                    <div className="admin-hero-panel-value">{filtered.length}</div>
-                                </div>
-                                <div className="admin-hero-panel-item">
-                                    <div className="admin-hero-panel-label">Centers in use</div>
-                                    <div className="admin-hero-panel-value">{centerBreakdown.length}</div>
-                                </div>
-                                <div className="admin-hero-panel-item">
-                                    <div className="admin-hero-panel-label">Needs cleanup</div>
-                                    <div className="admin-hero-panel-value">{studentsNeedingCenterCleanup.length}</div>
-                                </div>
-                            </div>
+                        <div className="studio-search" style={{ minWidth: 180 }}>
+                            <select value={centerFilter} onChange={(e) => setCenterFilter(e.target.value)}>
+                                <option value="">All Centers</option>
+                                {centers.map((center) => (
+                                    <option key={center.id} value={center.id}>{center.name}</option>
+                                ))}
+                            </select>
                         </div>
+                        <button className="studio-action" onClick={openAdd}>Add Student</button>
                     </div>
                 </section>
 
-                <div className="topbar">
-                    <div>
-                        <div className="topbar-title">👥 Students</div>
-                        <div className="topbar-meta">{students.length} registered students</div>
-                    </div>
-                    <button className="btn btn-primary" onClick={openAdd}>➕ Add Student</button>
-                </div>
-
                 {multiTenantEnabled && !activeMembership ? (
-                    <div className="card">
-                        <div className="empty-state">
-                            <div className="empty-state-icon">🔒</div>
-                            <div className="empty-state-text">No church membership linked yet</div>
-                            <div className="empty-state-sub">Ask your church admin to add your UID in the Members page.</div>
-                        </div>
-                    </div>
+                    <div className="studio-panel studio-empty">No church membership linked yet. Ask your church admin to add your UID in the Members page.</div>
                 ) : (
                 <>
-                <div className="summary-grid">
-                    <div className="summary-card">
-                        <div className="summary-label">Total students</div>
-                        <div className="summary-value">{students.length}</div>
+                <section className="studio-metrics">
+                    <div className="studio-metric">
+                        <div className="studio-metric-label">Total students</div>
+                        <div className="studio-metric-value">{students.length}</div>
                     </div>
-                    <div className="summary-card">
-                        <div className="summary-label">Centers in use</div>
-                        <div className="summary-value">{centerBreakdown.length}</div>
+                    <div className="studio-metric">
+                        <div className="studio-metric-label">Centers in use</div>
+                        <div className="studio-metric-value">{centerBreakdown.length}</div>
                     </div>
-                    <div className="summary-card">
-                        <div className="summary-label">Currently visible</div>
-                        <div className="summary-value">{filtered.length}</div>
+                    <div className="studio-metric">
+                        <div className="studio-metric-label">Visible now</div>
+                        <div className="studio-metric-value">{filtered.length}</div>
                     </div>
-                    <div className="summary-card">
-                        <div className="summary-label">Needs cleanup</div>
-                        <div className="summary-value" style={{ color: studentsNeedingCenterCleanup.length > 0 ? '#D97706' : 'var(--text)' }}>
-                            {studentsNeedingCenterCleanup.length}
-                        </div>
+                    <div className="studio-metric">
+                        <div className="studio-metric-label">Needs cleanup</div>
+                        <div className="studio-metric-value">{studentsNeedingCenterCleanup.length}</div>
                     </div>
-                </div>
+                </section>
 
                 {studentsNeedingCenterCleanup.length > 0 && (
-                    <div className="card section-card" style={{ marginBottom: 20 }}>
+                    <div className="studio-panel">
                         <div className="section-head">
                             <div>
                                 <div className="section-title">Center cleanup needed</div>
                                 <div className="section-copy">
-                                    These students still have legacy or missing center assignments. Reassign them to real centers like A1, A2, A3, or Church.
+                                    These students still have legacy or missing center assignments. Reassign them to real centers like Church, Center 1, Center 2, or Center 3.
                                 </div>
                             </div>
                             <div style={{ background: '#FFF1D9', color: '#B7791F', padding: '8px 12px', borderRadius: 999, fontWeight: 700, fontSize: 12 }}>
@@ -468,7 +443,6 @@ export default function StudentsPage() {
                     </div>
                 )}
 
-                {/* Center summary pills */}
                 {centerBreakdown.length > 0 && (
                     <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 20 }}>
                         <button
@@ -491,45 +465,39 @@ export default function StudentsPage() {
                                     color: centerFilter === center.id ? 'white' : color.color,
                                     transition: 'all 0.15s',
                                 }}
-                            >Center {center.name} ({count})</button>
+                            >{center.name} ({count})</button>
                         ))}
                     </div>
                 )}
-
-                {/* Search bar */}
-                <div className="card section-card" style={{ marginBottom: 24, padding: '14px 20px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
-                        <div className="search-wrapper">
-                            <span className="search-icon">🔍</span>
-                            <input className="search-input" placeholder="Search by name or center..." value={search} onChange={e => setSearch(e.target.value)} style={{ width: 300 }} />
-                        </div>
-                        <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
-                            Showing <strong>{filtered.length}</strong> of <strong>{students.length}</strong> students
-                        </span>
-                    </div>
-                </div>
-
-                {/* Student Cards Grid */}
                 {filtered.length === 0 ? (
-                    <div className="empty-state">
-                        <div className="empty-state-icon">👥</div>
-                        <div className="empty-state-text">No students found</div>
-                        <div className="empty-state-sub">Try a different search or add a new student.</div>
-                    </div>
+                    <div className="studio-panel studio-empty">No students found. Try another search or add a new student.</div>
                 ) : (
-                    <div style={{
-                        display: 'grid',
-                        gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))',
-                        gap: 20,
-                    }}>
+                    <div className="studio-list-shell">
+                        <div className="studio-list-head studio-student-head">
+                            <div>Student</div>
+                            <div>Center</div>
+                            <div>Contact</div>
+                            <div>DOB</div>
+                            <div>Attendance</div>
+                            <div />
+                        </div>
                         {filtered.map(s => (
-                            <StudentCard
-                                key={s.id}
-                                student={s}
-                                onView={() => openDetail(s)}
-                                onEdit={() => openEdit(s)}
-                                onDelete={() => setDeleteConfirm(s.id)}
-                            />
+                            <div key={s.id} className="studio-list-row studio-student-row">
+                                <div className="studio-identity">
+                                    <div className="studio-avatar is-soft">{s.name.charAt(0).toUpperCase()}</div>
+                                    <div>
+                                        <div className="studio-primary">{s.name}</div>
+                                        <div className="studio-secondary">ID: {s.id.slice(0, 8)}</div>
+                                    </div>
+                                </div>
+                                <div className="studio-secondary">{getStudentCenterLabel(s)}</div>
+                                <div className="studio-secondary">{s.phone || '—'}</div>
+                                <div className="studio-secondary">{s.dob || '—'}</div>
+                                <div className="studio-secondary">Open profile</div>
+                                <div className="studio-inline-actions">
+                                    <button className="studio-link-button" onClick={() => openDetail(s)}>⋮</button>
+                                </div>
+                            </div>
                         ))}
                     </div>
                 )}
@@ -719,6 +687,7 @@ export default function StudentsPage() {
                 )}
                 </>
                 )}
+                </div>
             </main>
         </div>
     );

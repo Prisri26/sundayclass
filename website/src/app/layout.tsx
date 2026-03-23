@@ -4,8 +4,8 @@ import { AuthProvider } from '../context/AuthContext';
 import { ChurchProvider } from '../context/ChurchContext';
 
 export const metadata: Metadata = {
-  title: 'Sunday School Attendance Manager',
-  description: 'Real-time attendance management for Sunday School classes',
+  title: 'PrayLoom',
+  description: 'Premium white-label church operations platform',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

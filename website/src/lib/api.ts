@@ -17,21 +17,20 @@ import {
 } from 'firebase/firestore';
 import { db } from './firebase';
 import { getChurchMetadata, getCollectionPath, getSpotlightDocPath, MULTI_TENANT_ENABLED } from './platform';
+import { uploadWebImage } from './storage';
 
-const CLOUDINARY_CLOUD_NAME = 'dcgh5awyn';
-const CLOUDINARY_UPLOAD_PRESET = 'sunday_school';
+export async function uploadChurchLogo(file: File, churchId: string): Promise<string> {
+    return uploadWebImage(file, {
+        pathSegments: ['churches', churchId, 'branding'],
+        fileName: 'logo',
+    });
+}
 
-export async function uploadToCloudinary(file: File): Promise<string> {
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
-    const res = await fetch(
-        `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`,
-        { method: 'POST', body: formData }
-    );
-    if (!res.ok) throw new Error('Photo upload failed');
-    const data = await res.json();
-    return data.secure_url as string;
+export async function uploadStudentPhoto(file: File, churchId: string, studentName: string): Promise<string> {
+    return uploadWebImage(file, {
+        pathSegments: ['churches', churchId, 'students'],
+        fileName: studentName || 'student-photo',
+    });
 }
 
 export interface Student {

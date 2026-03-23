@@ -91,90 +91,53 @@ export default function ReportsPage() {
     const absentCount = filtered.filter((r) => r.status === 'absent').length;
     const uniqueDates = [...new Set(filtered.map((r) => r.date))].length;
     const uniqueStudents = new Set(filtered.map((r) => r.studentId)).size;
+    const growthRate = filtered.length > 0 ? Math.round((presentCount / filtered.length) * 100) : 0;
     const workspaceName = branding?.churchDisplayName || activeChurch?.name || 'your church workspace';
 
     return (
         <div className="app-layout">
             <Sidebar />
             <main className="main-content">
-                <section className="admin-hero">
-                    <div className="admin-hero-grid">
-                        <div>
-                            <div className="admin-hero-eyebrow">Reports & Export</div>
-                            <div className="admin-hero-title">Turn attendance history into clean church reports</div>
-                            <div className="admin-hero-copy">
-                                Filter a date range, preview the records, and export attendance into CSV or Excel for leaders, audits, and follow-up planning.
-                            </div>
-                            <div className="admin-hero-actions">
-                                <div className="admin-hero-chip">⛪ {workspaceName}</div>
-                                <div className="admin-hero-chip">📑 {filtered.length} records in range</div>
-                            </div>
+                <div className="studio-page">
+                    <section className="studio-head">
+                        <div className="studio-head-copy">
+                            <div className="studio-kicker">Reports & analytics</div>
+                            <h1 className="studio-title">Reports and Analytics</h1>
+                            <p className="studio-copy">Track ministry attendance patterns and center performance over time. A comprehensive view of spiritual engagement across your workspace.</p>
                         </div>
-                        <div className="admin-hero-panel">
-                            <div className="admin-hero-panel-title">Report snapshot</div>
-                            <div className="admin-hero-panel-list">
-                                <div className="admin-hero-panel-item">
-                                    <div className="admin-hero-panel-label">Tracked days</div>
-                                    <div className="admin-hero-panel-value">{uniqueDates}</div>
-                                </div>
-                                <div className="admin-hero-panel-item">
-                                    <div className="admin-hero-panel-label">Students covered</div>
-                                    <div className="admin-hero-panel-value">{uniqueStudents}</div>
-                                </div>
-                                <div className="admin-hero-panel-item">
-                                    <div className="admin-hero-panel-label">Present marks</div>
-                                    <div className="admin-hero-panel-value">{presentCount}</div>
-                                </div>
-                            </div>
+                        <div className="studio-head-actions">
+                            <button className="studio-action is-soft" type="button">{workspaceName}</button>
+                            <button className="studio-action" type="button">Export</button>
                         </div>
+                    </section>
+
+                {multiTenantEnabled && !activeMembership ? (
+                    <div className="studio-panel studio-empty">No church membership linked yet. Ask your church admin to add your UID in the Members page.</div>
+                ) : (
+                <>
+                <section className="studio-metrics">
+                    <div className="studio-metric">
+                        <div className="studio-metric-label">Total attendance</div>
+                        <div className="studio-metric-value">{filtered.length.toLocaleString()}</div>
+                    </div>
+                    <div className="studio-metric">
+                        <div className="studio-metric-label">Growth rate</div>
+                        <div className="studio-metric-value">{growthRate}%</div>
+                    </div>
+                    <div className="studio-metric">
+                        <div className="studio-metric-label">Top center</div>
+                        <div className="studio-metric-value">{students[0] ? getStudentCenterLabel(students[0]) : '—'}</div>
+                    </div>
+                    <div className="studio-metric">
+                        <div className="studio-metric-label">Students covered</div>
+                        <div className="studio-metric-value">{uniqueStudents}</div>
                     </div>
                 </section>
 
-                <div className="topbar">
-                    <div>
-                        <div className="topbar-title">📑 Reports</div>
-                        <div className="topbar-meta">Export attendance data as CSV or Excel</div>
-                    </div>
-                </div>
-
-                {multiTenantEnabled && !activeMembership ? (
-                    <div className="card">
-                        <div className="empty-state">
-                            <div className="empty-state-icon">🔒</div>
-                            <div className="empty-state-text">No church membership linked yet</div>
-                            <div className="empty-state-sub">Ask your church admin to add your UID in the Members page.</div>
-                        </div>
-                    </div>
-                ) : (
-                <>
-                <div className="summary-grid">
-                    <div className="summary-card">
-                        <div className="summary-label">Days tracked</div>
-                        <div className="summary-value">{uniqueDates}</div>
-                    </div>
-                    <div className="summary-card">
-                        <div className="summary-label">Present marks</div>
-                        <div className="summary-value" style={{ color: 'var(--present)' }}>{presentCount}</div>
-                    </div>
-                    <div className="summary-card">
-                        <div className="summary-label">Absent marks</div>
-                        <div className="summary-value" style={{ color: 'var(--absent)' }}>{absentCount}</div>
-                    </div>
-                    <div className="summary-card">
-                        <div className="summary-label">Students covered</div>
-                        <div className="summary-value">{uniqueStudents}</div>
-                    </div>
-                </div>
-
-                <div className="card section-card">
-                    {/* Date Range Filters */}
-                    <div className="section-head">
-                        <div>
-                            <div className="section-title">Export filters</div>
-                            <div className="section-copy">Choose a date range and export the matching attendance records.</div>
-                        </div>
-                    </div>
-                    <div className="soft-panel" style={{ marginBottom: '24px' }}>
+                <section className="studio-panel">
+                    <div className="studio-section-title">Attendance Trends</div>
+                    <div className="studio-section-copy">Review the last quarter of ministry attendance and export the filtered records when needed.</div>
+                    <div className="soft-panel" style={{ marginTop: 20, marginBottom: '24px' }}>
                     <div className="toolbar" style={{ marginBottom: 0 }}>
                         <div className="filter-bar">
                             <span className="filter-label">From:</span>
@@ -186,32 +149,20 @@ export default function ReportsPage() {
                             )}
                         </div>
                         <div style={{ display: 'flex', gap: '10px' }}>
-                            <button className="btn btn-ghost" onClick={exportCSV} disabled={exporting || filtered.length === 0}>
+                            <button className="studio-action is-soft" onClick={exportCSV} disabled={exporting || filtered.length === 0}>
                                 {exporting ? <span className="spinner" style={{ borderTopColor: 'var(--primary)' }} /> : '📄'} Export CSV
                             </button>
-                            <button className="btn btn-success" onClick={exportExcel} disabled={exporting || filtered.length === 0}>
+                            <button className="studio-action" onClick={exportExcel} disabled={exporting || filtered.length === 0}>
                                 {exporting ? <span className="spinner" /> : '📊'} Export Excel
                             </button>
                         </div>
                     </div>
                     </div>
-
-                    {/* Preview Table */}
                     {filtered.length === 0 ? (
-                        <div className="empty-state">
-                            <div className="empty-state-icon">📑</div>
-                            <div className="empty-state-text">No records in selected range</div>
-                            <div className="empty-state-sub">Adjust the date range or mark attendance first.</div>
-                        </div>
+                        <div className="studio-empty">No records in the selected range. Adjust the dates or mark attendance first.</div>
                     ) : (
                         <>
-                            <div className="section-head">
-                                <div>
-                                    <div className="section-title">Report preview</div>
-                                    <div className="section-copy">Preview the export before downloading it.</div>
-                                </div>
-                            </div>
-                            <div style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '12px' }}>
+                            <div style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '12px', marginTop: '18px' }}>
                                 Previewing {filtered.length} records
                             </div>
                             <div className="table-wrapper">
@@ -255,9 +206,10 @@ export default function ReportsPage() {
                             </div>
                         </>
                     )}
-                </div>
+                </section>
                 </>
                 )}
+                </div>
             </main>
         </div>
     );

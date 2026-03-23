@@ -162,7 +162,7 @@ export default function AddStudentScreen() {
         try {
             let photoUrl: string | undefined;
             if (photoUri) {
-                photoUrl = await uploadStudentPhoto(photoUri, name.trim());
+                photoUrl = await uploadStudentPhoto(photoUri, name.trim(), activeChurchId ?? undefined);
             }
 
             await addStudent({

@@ -6,20 +6,21 @@ import { auth } from '../lib/firebase';
 import { useChurch } from '../context/ChurchContext';
 
 const navItems = [
-    { href: '/dashboard', label: 'Dashboard', icon: '📊' },
-    { href: '/students', label: 'Students', icon: '👥' },
-    { href: '/members', label: 'Members', icon: '🪪' },
-    { href: '/centers', label: 'Centers', icon: '🏠' },
-    { href: '/attendance', label: 'Attendance', icon: '📋' },
-    { href: '/reports', label: 'Reports', icon: '📑' },
-    { href: '/live', label: 'Live Feed 🔴', icon: '📹' },
+    { href: '/dashboard', label: 'Dashboard', icon: '▦' },
+    { href: '/students', label: 'Students', icon: '◎' },
+    { href: '/members', label: 'Members', icon: '◔' },
+    { href: '/centers', label: 'Centers', icon: '⌂' },
+    { href: '/attendance', label: 'Attendance', icon: '◷' },
+    { href: '/reports', label: 'Reports', icon: '▤' },
+    { href: '/live', label: 'Live Feed', icon: '✦' },
+    { href: '/settings', label: 'Settings', icon: '⚙' },
 ];
 
 export default function Sidebar() {
     const pathname = usePathname();
     const { activeChurch, activeChurchId, branding, availableChurches, loading, multiTenantEnabled, setActiveChurchId } = useChurch();
 
-    const workspaceName = branding?.churchDisplayName || activeChurch?.name || 'Sunday School Workspace';
+    const workspaceName = branding?.churchDisplayName || activeChurch?.name || 'PrayLoom Workspace';
     const workspaceMeta = multiTenantEnabled
         ? availableChurches.length > 0
             ? `${availableChurches.length} church workspace${availableChurches.length > 1 ? 's' : ''}`
@@ -31,25 +32,25 @@ export default function Sidebar() {
     return (
         <aside className="sidebar">
             <div className="sidebar-brand">
-                {branding?.logoUrl ? (
-                    <img
-                        src={branding.logoUrl}
-                        alt={workspaceName}
-                        style={{ width: 44, height: 44, borderRadius: 14, objectFit: 'cover', background: 'rgba(255,255,255,0.16)' }}
-                    />
-                ) : (
-                    <span className="sidebar-brand-icon">✝️</span>
-                )}
+                <div className="sidebar-brand-mark">
+                    {branding?.logoUrl ? (
+                        <img
+                            src={branding.logoUrl}
+                            alt={workspaceName}
+                            style={{ width: 28, height: 28, borderRadius: 10, objectFit: 'cover', background: 'rgba(255,255,255,0.16)' }}
+                        />
+                    ) : (
+                        <span className="sidebar-brand-icon">PL</span>
+                    )}
+                </div>
                 <div>
-                    <div className="sidebar-brand-title">{branding?.shortName || workspaceName}</div>
-                    <div className="sidebar-brand-sub">{branding?.welcomeTitle || 'Attendance Manager'}</div>
+                    <div className="sidebar-brand-title">{branding?.shortName || 'PrayLoom'}</div>
+                    <div className="sidebar-brand-sub">Sacred operations</div>
                 </div>
             </div>
 
             <div className="sidebar-workspace-card">
-                <div className="sidebar-workspace-eyebrow">
-                    {multiTenantEnabled ? 'Active Church' : 'Workspace'}
-                </div>
+                <div className="sidebar-workspace-eyebrow">{multiTenantEnabled ? 'Current Workspace' : 'Workspace'}</div>
                 <div className="sidebar-workspace-title">{workspaceName}</div>
                 <div className="sidebar-workspace-copy">{workspaceMeta}</div>
 
@@ -87,9 +88,9 @@ export default function Sidebar() {
 
             <div className="sidebar-footer">
                 <button className="sidebar-logout" onClick={() => signOut(auth)}>
-                    <span>🚪</span> Sign Out
+                    <span>↗</span> Sign Out
                 </button>
-                <div className="sidebar-footer-text">🙏 Serving with faith</div>
+                <div className="sidebar-footer-text">Powered by PrayLoom</div>
             </div>
         </aside>
     );

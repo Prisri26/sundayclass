@@ -65,197 +65,159 @@ export default function DashboardPage() {
         <div className="app-layout">
             <Sidebar />
             <main className="main-content">
-                <div className="dashboard-shell">
-                    <section className="dashboard-hero">
-                        <div className="dashboard-hero-grid">
-                            <div>
-                                <div className="dashboard-hero-eyebrow">Church Dashboard</div>
-                                <div className="dashboard-hero-title">{welcomeTitle}</div>
-                                <div className="dashboard-hero-copy">{welcomeSubtitle}</div>
-                                <div className="dashboard-hero-meta">
-                                    <div className="dashboard-chip">⛪ {workspaceName}</div>
-                                    <div className="dashboard-chip">🧭 {(activeMembership?.role || 'viewer').replace('_', ' ')}</div>
-                                    <div className="dashboard-chip is-soft">📅 {today}</div>
-                                </div>
-                            </div>
-
-                            <div className="dashboard-hero-panel">
-                                <div className="dashboard-hero-panel-title">Today at a glance</div>
-                                <div className="dashboard-hero-panel-list">
-                                    <div className="dashboard-hero-panel-item">
-                                        <div className="dashboard-hero-panel-label">Total students</div>
-                                        <div className="dashboard-hero-panel-value">{totalStudents}</div>
-                                    </div>
-                                    <div className="dashboard-hero-panel-item">
-                                        <div className="dashboard-hero-panel-label">Marked present</div>
-                                        <div className="dashboard-hero-panel-value">{presentToday}</div>
-                                    </div>
-                                    <div className="dashboard-hero-panel-item">
-                                        <div className="dashboard-hero-panel-label">Attendance rate</div>
-                                        <div className="dashboard-hero-panel-value">{attendancePercent}%</div>
-                                    </div>
-                                </div>
-                            </div>
+                <div className="studio-page">
+                    <section className="studio-head">
+                        <div className="studio-head-copy">
+                            <div className="studio-kicker">Current workspace</div>
+                            <h1 className="studio-title">{welcomeTitle}</h1>
+                            <p className="studio-copy">{welcomeSubtitle}</p>
+                        </div>
+                        <div className="studio-head-actions">
+                            <button className="studio-action is-soft" type="button">{today}</button>
+                            <button className="studio-action" type="button">{workspaceName}</button>
                         </div>
                     </section>
 
-                    {multiTenantEnabled && !activeMembership && (
-                        <div className="card">
-                            <div className="empty-state">
-                                <div className="empty-state-icon">⛪</div>
-                                <div className="empty-state-text">No church membership linked yet</div>
-                                <div className="empty-state-sub">Ask your church admin to add your UID in the Members page before using the dashboard.</div>
-                            </div>
+                    {multiTenantEnabled && !activeMembership ? (
+                        <div className="studio-panel studio-empty">
+                            No church membership linked yet. Ask your church admin to add your UID in the Members page before using the dashboard.
                         </div>
-                    )}
-
-                    <div className="stats-grid">
-                        <div className="stat-card">
-                            <div className="stat-icon" style={{ background: '#EEF2FF' }}>👥</div>
-                            <div>
-                                <div className="stat-num">{totalStudents}</div>
-                                <div className="stat-label">Total Students</div>
-                            </div>
-                        </div>
-                        <div className="stat-card">
-                            <div className="stat-icon" style={{ background: '#D1FAE5' }}>✅</div>
-                            <div>
-                                <div className="stat-num" style={{ color: 'var(--present)' }}>{presentToday}</div>
-                                <div className="stat-label">Present Today</div>
-                            </div>
-                        </div>
-                        <div className="stat-card">
-                            <div className="stat-icon" style={{ background: '#FEE2E2' }}>❌</div>
-                            <div>
-                                <div className="stat-num" style={{ color: 'var(--absent)' }}>{absentToday}</div>
-                                <div className="stat-label">Absent Today</div>
-                            </div>
-                        </div>
-                        <div className="stat-card">
-                            <div className="stat-icon" style={{ background: '#FEF3C7' }}>📈</div>
-                            <div>
-                                <div className="stat-num" style={{ color: '#D97706' }}>{attendancePercent}%</div>
-                                <div className="stat-label">Attendance Rate</div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="dashboard-content-grid">
-                        <div className="dashboard-stack">
-                            <section className="card dashboard-section-card">
-                                <div className="dashboard-section-head">
-                                    <div>
-                                        <div className="dashboard-section-title">Weekly attendance trend</div>
-                                        <div className="dashboard-section-copy">A clear look at how attendance is moving across your most recent Sundays.</div>
-                                    </div>
-                                    <div className="dashboard-mini-stat">
-                                        <div className="dashboard-mini-stat-value">{chartData.length}</div>
-                                        <div className="dashboard-mini-stat-label">Tracked days</div>
-                                    </div>
+                    ) : (
+                        <>
+                            <section className="studio-metrics">
+                                <div className="studio-metric">
+                                    <div className="studio-metric-label">Student count</div>
+                                    <div className="studio-metric-value">{totalStudents}</div>
                                 </div>
-                                {chartData.length === 0 ? (
-                                    <div className="empty-state">
-                                        <div className="empty-state-icon">📊</div>
-                                        <div className="empty-state-text">No data yet</div>
-                                        <div className="empty-state-sub">Attendance will appear here after teachers mark it.</div>
-                                    </div>
-                                ) : (
-                                    <div className="chart-container">
-                                        <ResponsiveContainer width="100%" height="100%">
-                                            <BarChart data={chartData} margin={{ top: 12, right: 10, left: -12, bottom: 0 }}>
-                                                <CartesianGrid strokeDasharray="3 3" stroke="#E7EEF6" />
-                                                <XAxis dataKey="date" tick={{ fontSize: 11, fill: '#64748B' }} tickLine={false} axisLine={false} />
-                                                <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: '#64748B' }} tickLine={false} axisLine={false} />
-                                                <Tooltip />
-                                                <Legend />
-                                                <Bar dataKey="Present" fill="#10B981" radius={[8, 8, 0, 0]} />
-                                                <Bar dataKey="Absent" fill="#EF4444" radius={[8, 8, 0, 0]} />
-                                            </BarChart>
-                                        </ResponsiveContainer>
-                                    </div>
-                                )}
-                            </section>
-
-                            <section className="card dashboard-section-card">
-                                <div className="dashboard-section-head">
-                                    <div>
-                                        <div className="dashboard-section-title">Sunday readiness</div>
-                                        <div className="dashboard-section-copy">A simple operational snapshot before the ministry starts marking attendance.</div>
-                                    </div>
+                                <div className="studio-metric">
+                                    <div className="studio-metric-label">Present today</div>
+                                    <div className="studio-metric-value">{presentToday}</div>
                                 </div>
-                                <div style={{ display: 'grid', gap: 14 }}>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 16px', borderRadius: 18, background: '#F8FBFF', border: '1px solid #E2E8F0' }}>
-                                        <div>
-                                            <div style={{ fontWeight: 700, color: 'var(--text)' }}>Attendance recorded today</div>
-                                            <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginTop: 4 }}>How many student records are already marked for today.</div>
-                                        </div>
-                                        <div style={{ fontSize: 28, fontWeight: 900, color: 'var(--primary-dark)' }}>{todayRecords.length}</div>
-                                    </div>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 16px', borderRadius: 18, background: '#F8FBFF', border: '1px solid #E2E8F0' }}>
-                                        <div>
-                                            <div style={{ fontWeight: 700, color: 'var(--text)' }}>Students pending</div>
-                                            <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginTop: 4 }}>Students still not marked for today.</div>
-                                        </div>
-                                        <div style={{ fontSize: 28, fontWeight: 900, color: '#B91C1C' }}>{Math.max(totalStudents - todayRecords.length, 0)}</div>
-                                    </div>
+                                <div className="studio-metric">
+                                    <div className="studio-metric-label">Absent today</div>
+                                    <div className="studio-metric-value">{absentToday}</div>
+                                </div>
+                                <div className="studio-metric">
+                                    <div className="studio-metric-label">Attendance rate</div>
+                                    <div className="studio-metric-value">{attendancePercent}%</div>
                                 </div>
                             </section>
-                        </div>
 
-                        <section className="card dashboard-section-card">
-                            <div className="dashboard-section-head">
-                                <div>
-                                    <div className="dashboard-section-title">Today&apos;s breakdown</div>
-                                    <div className="dashboard-section-copy">See the balance between present and absent students at a glance.</div>
-                                </div>
-                                <div className="dashboard-mini-stat">
-                                    <div className="dashboard-mini-stat-value">{attendancePercent}%</div>
-                                    <div className="dashboard-mini-stat-label">Attendance</div>
-                                </div>
-                            </div>
-                            {totalStudents === 0 ? (
-                                <div className="empty-state" style={{ padding: '20px' }}>
-                                    <div className="empty-state-icon">👥</div>
-                                    <div className="empty-state-sub">No students yet</div>
-                                </div>
-                            ) : (
-                                <>
-                                    <div className="chart-container" style={{ height: 240 }}>
-                                        <ResponsiveContainer width="100%" height="100%">
-                                            <PieChart>
-                                                <Pie data={pieData} cx="50%" cy="50%" innerRadius={60} outerRadius={92} dataKey="value" paddingAngle={5}>
-                                                    {pieData.map((entry, i) => <Cell key={i} fill={entry.color} />)}
-                                                </Pie>
-                                                <Tooltip />
-                                            </PieChart>
-                                        </ResponsiveContainer>
-                                    </div>
-                                    <div style={{ display: 'grid', gap: 12, marginTop: 6 }}>
-                                        {pieData.map((data) => (
-                                            <div
-                                                key={data.name}
-                                                style={{
-                                                    display: 'flex',
-                                                    justifyContent: 'space-between',
-                                                    alignItems: 'center',
-                                                    padding: '12px 14px',
-                                                    borderRadius: 16,
-                                                    background: '#F8FBFF',
-                                                    border: '1px solid #E2E8F0',
-                                                }}
-                                            >
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                                                    <div style={{ width: 12, height: 12, borderRadius: '50%', background: data.color }} />
-                                                    <span style={{ color: 'var(--text-secondary)', fontWeight: 700 }}>{data.name}</span>
+                            <section className="studio-grid">
+                                <div className="studio-stack">
+                                    <div className="studio-panel">
+                                        <div className="studio-panel-title">Attendance Overview</div>
+                                        <div className="studio-panel-copy">Comparison of weekly participation across your most recent Sundays.</div>
+                                        <div className="studio-chart-placeholder">
+                                            {chartData.length === 0 ? (
+                                                <div className="studio-empty">Attendance will appear here after teachers mark it.</div>
+                                            ) : (
+                                                <div className="studio-chart-area">
+                                                    <ResponsiveContainer width="100%" height={224}>
+                                                        <BarChart data={chartData} margin={{ top: 18, right: 0, left: -18, bottom: 0 }}>
+                                                            <CartesianGrid strokeDasharray="3 3" stroke="#ece9fb" />
+                                                            <XAxis dataKey="date" tick={{ fontSize: 11, fill: '#7e7997' }} tickLine={false} axisLine={false} />
+                                                            <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: '#7e7997' }} tickLine={false} axisLine={false} />
+                                                            <Tooltip />
+                                                            <Legend />
+                                                            <Bar dataKey="Present" fill="#5346e4" radius={[8, 8, 0, 0]} />
+                                                            <Bar dataKey="Absent" fill="#cdd2f6" radius={[8, 8, 0, 0]} />
+                                                        </BarChart>
+                                                    </ResponsiveContainer>
                                                 </div>
-                                                <strong style={{ fontSize: 18, color: 'var(--text)' }}>{data.value}</strong>
-                                            </div>
-                                        ))}
+                                            )}
+                                        </div>
                                     </div>
-                                </>
-                            )}
-                        </section>
-                    </div>
+
+                                    <div className="studio-panel">
+                                        <div className="studio-section-title">Quick Actions</div>
+                                        <div className="studio-section-copy">Move directly into the next administrative step for this Sunday.</div>
+                                        <div className="studio-action-list">
+                                            <div className="studio-action-row">
+                                                <div>
+                                                    <strong>Add Student</strong>
+                                                    <span>Create a new student profile and assign a center.</span>
+                                                </div>
+                                                <span className="studio-action-arrow">→</span>
+                                            </div>
+                                            <div className="studio-action-row">
+                                                <div>
+                                                    <strong>Add Center</strong>
+                                                    <span>Organize your next Sunday class location.</span>
+                                                </div>
+                                                <span className="studio-action-arrow">→</span>
+                                            </div>
+                                            <div className="studio-action-row">
+                                                <div>
+                                                    <strong>Invite Member</strong>
+                                                    <span>Link teachers and volunteers to the workspace.</span>
+                                                </div>
+                                                <span className="studio-action-arrow">→</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="studio-stack">
+                                    <div className="studio-panel">
+                                        <div className="studio-section-title">Today at a glance</div>
+                                        <div className="studio-section-copy">A quick operational check before ministry begins.</div>
+                                        <div className="studio-activity-list">
+                                            <div className="studio-activity-row">
+                                                <div>
+                                                    <strong>Attendance recorded today</strong>
+                                                    <span>Student records already marked for {today}.</span>
+                                                </div>
+                                                <div className="studio-activity-meta">{todayRecords.length}</div>
+                                            </div>
+                                            <div className="studio-activity-row">
+                                                <div>
+                                                    <strong>Students pending</strong>
+                                                    <span>Still waiting to be marked in the roster.</span>
+                                                </div>
+                                                <div className="studio-activity-meta">{Math.max(totalStudents - todayRecords.length, 0)}</div>
+                                            </div>
+                                            <div className="studio-activity-row">
+                                                <div>
+                                                    <strong>Active role</strong>
+                                                    <span>Your current access within this church workspace.</span>
+                                                </div>
+                                                <div className="studio-activity-meta">{(activeMembership?.role || 'viewer').replace('_', ' ')}</div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="studio-panel">
+                                        <div className="studio-section-title">Church activity feed</div>
+                                        <div className="studio-section-copy">A calmer summary of what changed across your ministry this week.</div>
+                                        <div className="studio-activity-list">
+                                            <div className="studio-activity-row">
+                                                <div>
+                                                    <strong>Attendance closed for the last Sunday</strong>
+                                                    <span>{presentToday} students present and {absentToday} absent across today&apos;s entries.</span>
+                                                </div>
+                                                <div className="studio-activity-meta">Today</div>
+                                            </div>
+                                            <div className="studio-activity-row">
+                                                <div>
+                                                    <strong>{workspaceName} branding is active</strong>
+                                                    <span>Your workspace theme and welcome content are now live for the team.</span>
+                                                </div>
+                                                <div className="studio-activity-meta">Workspace</div>
+                                            </div>
+                                            <div className="studio-activity-row">
+                                                <div>
+                                                    <strong>Weekly participation snapshot</strong>
+                                                    <span>{attendancePercent}% attendance rate with {chartData.length} tracked Sundays in the latest trend.</span>
+                                                </div>
+                                                <div className="studio-activity-meta">Insight</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </section>
+                        </>
+                    )}
                 </div>
             </main>
         </div>

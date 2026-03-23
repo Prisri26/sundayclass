@@ -107,14 +107,14 @@ export default function LoginScreen() {
                             </View>
                         </View>
                         <View style={styles.logoTextWrap}>
-                            <Text style={styles.eyebrow}>{branding?.shortName || 'Sunday School Platform'}</Text>
+                            <Text style={styles.eyebrow}>{branding?.shortName || 'PrayLoom'}</Text>
                             <Text style={styles.title}>{branding?.welcomeTitle || 'Welcome back'}</Text>
                             <Text style={styles.subtitle}>Track attendance with a calm, simple teacher workflow.</Text>
                         </View>
                         <View style={styles.heroFeatureRow}>
                             <View style={styles.heroFeatureCard}>
                                 <Text style={styles.heroFeatureLabel}>Church</Text>
-                                <Text style={styles.heroFeatureValue}>{branding?.churchDisplayName || branding?.shortName || 'Workspace'}</Text>
+                                <Text style={styles.heroFeatureValue}>{branding?.churchDisplayName || 'PrayLoom Workspace'}</Text>
                             </View>
                             <View style={styles.heroFeatureCard}>
                                 <Text style={styles.heroFeatureLabel}>Experience</Text>
@@ -171,7 +171,7 @@ export default function LoginScreen() {
                 </View>
 
                 <View style={styles.footer}>
-                    <Text style={styles.footerText}>Built for {branding?.churchDisplayName || 'churches'}, teachers, and Sunday class leaders.</Text>
+                    <Text style={styles.footerText}>Built on PrayLoom for {branding?.churchDisplayName || 'churches'}, teachers, and ministry leaders.</Text>
                 </View>
             </ScrollView>
         </KeyboardAvoidingView>
