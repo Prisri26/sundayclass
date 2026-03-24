@@ -1,6 +1,6 @@
 'use client';
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { onAuthStateChanged, User } from 'firebase/auth';
+import { onIdTokenChanged, User } from 'firebase/auth';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { auth } from '../lib/firebase';
 import { db } from '../lib/firebase';
@@ -40,7 +40,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     useEffect(() => {
         let unsubscribeProfile: () => void = () => undefined;
-        const unsub = onAuthStateChanged(auth, (u) => {
+        const unsub = onIdTokenChanged(auth, (u) => {
             unsubscribeProfile();
             setUser(u);
             setMustChangePassword(false);
