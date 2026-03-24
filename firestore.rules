@@ -90,6 +90,10 @@ service cloud.firestore {
         allow update, delete: if canManageChurch(churchId) || isPlatformAdmin();
       }
 
+      match /provisioningMembers/{provisioningId} {
+        allow read, create, update, delete: if canManageChurch(churchId) || isPlatformAdmin();
+      }
+
       match /settings/{docId} {
         allow read: if canReadChurch(churchId);
         allow create: if isBootstrapChurchCreator(churchId) || canManageChurch(churchId) || isPlatformAdmin();

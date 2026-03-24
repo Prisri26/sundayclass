@@ -20,6 +20,7 @@ import { Feather } from '@expo/vector-icons';
 import { useChurchBranding } from '../../hooks/useChurchBranding';
 import { getBrandPalette } from '../../lib/branding';
 import { getBootstrapChurchId } from '../../lib/platform';
+import { mapFirebaseAuthError, normalizeAuthIdentifier } from '../../lib/auth';
 
 function InputField({
     label,
@@ -73,9 +74,9 @@ export default function LoginScreen() {
         }
         setLoading(true);
         try {
-            await signInWithEmailAndPassword(auth, email.trim(), password);
+            await signInWithEmailAndPassword(auth, normalizeAuthIdentifier(email), password);
         } catch (err: any) {
-            Alert.alert('Login failed', err.message);
+            Alert.alert('Login failed', mapFirebaseAuthError(err));
         } finally {
             setLoading(false);
         }

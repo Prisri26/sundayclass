@@ -1,0 +1,198 @@
+'use client';
+
+import Image from 'next/image';
+import Link from 'next/link';
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '../../../context/AuthContext';
+import { getSelectedPlan, saveSelectedPlan } from '../../../lib/onboarding';
+import { DEFAULT_PLAN_ID, PLAN_DEFINITIONS, PlanId } from '../../../lib/plans';
+
+function PlanSidebar() {
+  return (
+    <aside className="onboard-sidebar">
+      <div className="onboard-sidebar-content">
+        <Link href="/" className="onboard-brand">
+          <Image src="/prayloomlogo.svg" alt="PrayLoom" width={196} height={58} className="onboard-brand-logo" />
+        </Link>
+
+        <div className="onboard-progress-block">
+          <div className="onboard-progress-label">Progress</div>
+          <div className="onboard-progress-bar">
+            <span style={{ width: '20%' }} />
+          </div>
+          <div className="onboard-progress-copy">Step 1 of 5: Plan Selection</div>
+
+          <div className="onboard-checklist">
+            <div className="onboard-check-item active">
+              <div className="onboard-check-icon">1</div>
+              <span>Plan Selection</span>
+            </div>
+            <div className="onboard-check-item">
+              <div className="onboard-check-icon">2</div>
+              <span>Workspace Basics</span>
+            </div>
+            <div className="onboard-check-item">
+              <div className="onboard-check-icon">3</div>
+              <span>Identity &amp; Branding</span>
+            </div>
+            <div className="onboard-check-item">
+              <div className="onboard-check-icon">4</div>
+              <span>Center Setup</span>
+            </div>
+            <div className="onboard-check-item">
+              <div className="onboard-check-icon">5</div>
+              <span>Team Invitation</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="onboard-sidebar-footer">
+        <div className="onboard-sidebar-quote">
+          &ldquo;Choose a plan that fits the scale of your ministry today. You can always grow later.&rdquo;
+        </div>
+      </div>
+    </aside>
+  );
+}
+
+export default function PlanSelectionPage() {
+  const router = useRouter();
+  const { user, loading, isEmailVerified } = useAuth();
+  const [selectedPlanId, setSelectedPlanId] = useState<PlanId>(DEFAULT_PLAN_ID);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function bootstrap() {
+      if (loading) return;
+      if (!user) {
+        router.replace('/signup');
+        return;
+      }
+      if (!isEmailVerified) {
+        router.replace('/verify-email');
+        return;
+      }
+
+      const planId = await getSelectedPlan(user.uid);
+      if (!cancelled) {
+        setSelectedPlanId(planId || DEFAULT_PLAN_ID);
+      }
+    }
+
+    bootstrap();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isEmailVerified, loading, router, user]);
+
+  const handleContinue = async () => {
+    if (!user) return;
+
+    setSaving(true);
+    setError('');
+    try {
+      await saveSelectedPlan(user.uid, selectedPlanId);
+      router.push('/onboarding');
+    } catch (err: any) {
+      setError(err?.message || 'Failed to save your plan. Please try again.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (loading) {
+    return <div className="loading-page"><div className="spinner" /></div>;
+  }
+
+  return (
+    <div className="onboard-shell">
+      <div className="onboard-layout">
+        <PlanSidebar />
+
+        <main className="onboard-main">
+          <div className="onboard-scroll-region">
+            <div className="onboard-wrap onboard-wrap-wide">
+              <div className="onboard-step">Step 1 of 5</div>
+              <h1 className="onboard-title">Choose the plan that fits your church.</h1>
+              <p className="onboard-copy">
+                Start simple today. We&apos;ll save your selected plan and continue into workspace setup next.
+              </p>
+
+              <div className="plan-selection-grid">
+                {PLAN_DEFINITIONS.map((plan) => {
+                  const isSelected = plan.id === selectedPlanId;
+                  const centerLimit = plan.limits.centers === null ? 'Unlimited centers' : `Up to ${plan.limits.centers} centers`;
+                  const memberLimit = plan.limits.members === null ? 'Unlimited members' : `Up to ${plan.limits.members} members`;
+
+                  return (
+                    <button
+                      type="button"
+                      key={plan.id}
+                      className={`plan-card tone-${plan.accent}${isSelected ? ' selected' : ''}`}
+                      onClick={() => setSelectedPlanId(plan.id)}
+                    >
+                      <div className="plan-card-head">
+                        <div>
+                          <div className="plan-card-name">{plan.name}</div>
+                          <div className="plan-card-price">{plan.priceLabel}</div>
+                        </div>
+                        {isSelected ? <span className="plan-card-pill">Selected</span> : null}
+                      </div>
+                      <div className="plan-card-subtitle">{plan.subtitle}</div>
+                      <div className="plan-card-description">{plan.description}</div>
+
+                      <div className="plan-card-limits">
+                        <div>{centerLimit}</div>
+                        <div>{memberLimit}</div>
+                      </div>
+
+                      <div className="plan-card-list">
+                        {plan.features.map((feature) => (
+                          <div key={feature} className="plan-card-item">
+                            <span className="plan-card-check">✓</span>
+                            <span>{feature}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div className="plan-note-card">
+                <div className="plan-note-copy">
+                  For now, every new workspace starts in a simple trial/manual activation state. We can add real billing and payment flows after the product foundation is stable.
+                </div>
+              </div>
+
+              {error ? (
+                <div style={{ background: '#ffdad6', color: '#93000a', padding: '12px 14px', borderRadius: '12px', fontSize: '13px', marginTop: '18px' }}>
+                  {error}
+                </div>
+              ) : null}
+            </div>
+          </div>
+
+          <div className="onboard-footer-bar">
+            <div className="onboard-footer-actions">
+              <Link href="/signup" className="onboard-ghost-btn">
+                Back
+              </Link>
+              <div className="onboard-footer-group">
+                <button type="button" className="onboard-primary-btn" onClick={handleContinue} disabled={saving}>
+                  {saving ? 'Saving...' : 'Continue to Workspace Setup'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </main>
+      </div>
+    </div>
+  );
+}

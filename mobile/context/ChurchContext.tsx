@@ -1,8 +1,7 @@
 import React, { createContext, ReactNode, useContext, useEffect, useMemo, useState } from 'react';
-import { onAuthStateChanged } from 'firebase/auth';
 import { MULTI_TENANT_ENABLED } from '../lib/platform';
-import { auth } from '../lib/firebase';
 import { ChurchSummary, Membership, getUserChurchAccess, syncUserChurchAccessProfile } from '../lib/tenant';
+import { useAuth } from './AuthContext';
 
 type ChurchContextValue = {
   activeChurchId: string | null;
@@ -27,6 +26,7 @@ const ChurchContext = createContext<ChurchContextValue>({
 });
 
 export function ChurchProvider({ children }: { children: ReactNode }) {
+  const { user, loading: authLoading } = useAuth();
   const [activeChurchId, setActiveChurchId] = useState<string | null>(null);
   const [availableChurches, setAvailableChurches] = useState<ChurchSummary[]>([]);
   const [memberships, setMemberships] = useState<Membership[]>([]);
@@ -38,54 +38,53 @@ export function ChurchProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
-      if (!user) {
-        setAvailableChurches([]);
-        setMemberships([]);
-        setActiveChurchId(null);
-        setLoading(false);
-        return;
-      }
-
+    if (authLoading) {
       setLoading(true);
-      getUserChurchAccess(user.uid)
-        .then(async (access) => {
-          if (access.length > 0) {
-            await syncUserChurchAccessProfile(user.uid, access, {
-              email: user.email,
-              displayName: user.displayName,
-            });
-            const nextChurches = access.map((entry) => entry.church);
-            const nextMemberships = access.map((entry) => entry.membership);
-            setAvailableChurches(nextChurches);
-            setMemberships(nextMemberships);
-            setActiveChurchId((current) => {
-              if (current && nextChurches.some((church) => church.id === current)) {
-                return current;
-              }
-              return nextChurches[0]?.id ?? null;
-            });
-            setLoading(false);
-            return;
-          }
+      return;
+    }
 
-          setAvailableChurches([]);
-          setActiveChurchId(null);
-          setMemberships([]);
-          setLoading(false);
-        })
-        .catch(() => {
-          setAvailableChurches([]);
-          setActiveChurchId(null);
-          setMemberships([]);
-          setLoading(false);
-        });
-    });
+    if (!user) {
+      setAvailableChurches([]);
+      setMemberships([]);
+      setActiveChurchId(null);
+      setLoading(false);
+      return;
+    }
 
-    return () => {
-      unsubscribeAuth();
-    };
-  }, []);
+    setLoading(true);
+    getUserChurchAccess(user.uid)
+      .then(async (access) => {
+        if (access.length > 0) {
+          await syncUserChurchAccessProfile(user.uid, access, {
+            email: user.email,
+            displayName: user.displayName,
+          });
+          const nextChurches = access.map((entry) => entry.church);
+          const nextMemberships = access.map((entry) => entry.membership);
+          setAvailableChurches(nextChurches);
+          setMemberships(nextMemberships);
+          setActiveChurchId((current) => {
+            if (current && nextChurches.some((church) => church.id === current)) {
+              return current;
+            }
+            return nextChurches[0]?.id ?? null;
+          });
+          setLoading(false);
+          return;
+        }
+
+        setAvailableChurches([]);
+        setActiveChurchId(null);
+        setMemberships([]);
+        setLoading(false);
+      })
+      .catch(() => {
+        setAvailableChurches([]);
+        setActiveChurchId(null);
+        setMemberships([]);
+        setLoading(false);
+      });
+  }, [authLoading, user]);
 
   const activeChurch = availableChurches.find((church) => church.id === activeChurchId) ?? null;
   const activeMembership = memberships.find((membership) => membership.churchId === activeChurchId) ?? null;

@@ -39,6 +39,30 @@ type UserProfile = {
   churchIds?: string[];
 };
 
+async function ensureMembershipProfile(
+  userId: string,
+  churchId: string,
+  membership: Membership,
+  profile?: UserProfile | null,
+) {
+  const nextEmail = membership.email || profile?.email || '';
+  const nextDisplayName = membership.displayName || profile?.displayName || '';
+
+  if (membership.email === nextEmail && membership.displayName === nextDisplayName) {
+    return;
+  }
+
+  await setDoc(
+    doc(db, `churches/${churchId}/members/${userId}`),
+    {
+      email: nextEmail,
+      displayName: nextDisplayName,
+      updatedAt: serverTimestamp(),
+    },
+    { merge: true },
+  );
+}
+
 async function getUserProfile(userId: string): Promise<UserProfile | null> {
   const snap = await getDoc(doc(db, 'users', userId));
   return snap.exists() ? (snap.data() as UserProfile) : null;
@@ -70,6 +94,9 @@ async function getAccessForChurchIds(userId: string, churchIds: string[]): Promi
       if (membership.status !== 'active' || membership.churchId !== churchId) {
         return null;
       }
+
+      const profile = await getUserProfile(userId);
+      await ensureMembershipProfile(userId, churchId, membership, profile);
 
       const church = await getChurchSummary(churchId);
       if (!church) return null;

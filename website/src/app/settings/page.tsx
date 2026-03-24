@@ -8,6 +8,8 @@ import { useAuth } from '../../context/AuthContext';
 import { useChurch } from '../../context/ChurchContext';
 import { db } from '../../lib/firebase';
 import { saveBrandingSetup } from '../../lib/onboarding';
+import { getPlanDefinition } from '../../lib/plans';
+import { ChurchSubscription, getChurchSubscription } from '../../lib/subscription';
 
 type GeneralSettings = {
   timezone: string;
@@ -38,6 +40,7 @@ export default function SettingsPage() {
   const [generalForm, setGeneralForm] = useState(defaultGeneral);
   const [saving, setSaving] = useState(false);
   const [status, setStatus] = useState('');
+  const [subscription, setSubscription] = useState<ChurchSubscription | null>(null);
 
   useEffect(() => {
     if (!loading && !user) router.replace('/login');
@@ -67,6 +70,8 @@ export default function SettingsPage() {
         locale: data.locale || defaultGeneral.locale,
       });
     });
+
+    getChurchSubscription(activeChurchId).then(setSubscription).catch(() => setSubscription(null));
   }, [activeChurchId]);
 
   if (loading || !user) {
@@ -74,6 +79,7 @@ export default function SettingsPage() {
   }
 
   const canManageSettings = activeMembership?.role === 'church_admin';
+  const activePlan = getPlanDefinition(subscription?.planId);
 
   const handleSave = async () => {
     if (!activeChurchId) return;
@@ -113,6 +119,43 @@ export default function SettingsPage() {
             <div className="studio-panel studio-empty">Only church admins can manage workspace settings.</div>
           ) : (
             <>
+              <section className="studio-setting-grid">
+                <div>
+                  <div className="studio-section-title">Subscription</div>
+                  <div className="studio-section-copy">See your current PrayLoom plan, operational limits, and activation status.</div>
+                </div>
+                <div className="studio-panel studio-form-card">
+                  <div className="studio-subscription-header">
+                    <div>
+                      <div className="studio-subscription-plan">{subscription?.planName || activePlan.name}</div>
+                      <div className="studio-section-copy">{activePlan.subtitle}</div>
+                    </div>
+                    <span className={`studio-plan-pill is-${activePlan.accent}`}>
+                      {(subscription?.status || 'trial').replace('_', ' ')}
+                    </span>
+                  </div>
+
+                  <div className="studio-plan-limit-grid">
+                    <div className="studio-plan-limit-card">
+                      <div className="studio-plan-limit-label">Centers</div>
+                      <div className="studio-plan-limit-value">{subscription?.limits.centers ?? 'Unlimited'}</div>
+                    </div>
+                    <div className="studio-plan-limit-card">
+                      <div className="studio-plan-limit-label">Members</div>
+                      <div className="studio-plan-limit-value">{subscription?.limits.members ?? 'Unlimited'}</div>
+                    </div>
+                    <div className="studio-plan-limit-card">
+                      <div className="studio-plan-limit-label">Students</div>
+                      <div className="studio-plan-limit-value">{subscription?.limits.students ?? 'Unlimited'}</div>
+                    </div>
+                  </div>
+
+                  <div className="studio-plan-note">
+                    Billing is currently handled in a simple trial/manual activation mode while PrayLoom subscription management is being expanded.
+                  </div>
+                </div>
+              </section>
+
               <section className="studio-setting-grid">
                 <div>
                   <div className="studio-section-title">Church Profile</div>

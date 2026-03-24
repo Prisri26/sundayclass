@@ -1,16 +1,39 @@
 import { updateProfile, User } from 'firebase/auth';
-import { addDoc, collection, doc, serverTimestamp, setDoc, updateDoc } from 'firebase/firestore';
+import { addDoc, collection, doc, getDoc, getDocs, orderBy, query, serverTimestamp, setDoc, updateDoc } from 'firebase/firestore';
 import { db } from './firebase';
+import { DEFAULT_PLAN_ID, getPlanDefinition, PlanId } from './plans';
+import { Membership } from './tenant';
 
 export type CreateChurchWorkspaceInput = {
   fullName: string;
   churchName: string;
   slug: string;
+  selectedPlanId?: PlanId;
   contactEmail: string;
   contactPhone?: string;
   timezone: string;
   country?: string;
 };
+
+export async function saveSelectedPlan(userId: string, planId: PlanId) {
+  await setDoc(
+    doc(db, 'users', userId),
+    {
+      onboardingDraft: {
+        selectedPlanId: planId,
+        updatedAt: serverTimestamp(),
+      },
+      updatedAt: serverTimestamp(),
+    },
+    { merge: true },
+  );
+}
+
+export async function getSelectedPlan(userId: string): Promise<PlanId | null> {
+  const snapshot = await getDoc(doc(db, 'users', userId));
+  const selectedPlanId = snapshot.data()?.onboardingDraft?.selectedPlanId;
+  return selectedPlanId ? getPlanDefinition(selectedPlanId).id : null;
+}
 
 export function normalizeChurchSlug(input: string): string {
   return input
@@ -26,6 +49,7 @@ export async function createChurchWorkspace(user: User, input: CreateChurchWorks
   if (!slug) {
     throw new Error('Please enter a valid church name or slug.');
   }
+  const selectedPlan = getPlanDefinition(input.selectedPlanId || DEFAULT_PLAN_ID);
 
   const churchRef = doc(db, 'churches', slug);
   const memberRef = doc(db, `churches/${slug}/members`, user.uid);
@@ -33,6 +57,7 @@ export async function createChurchWorkspace(user: User, input: CreateChurchWorks
   const generalSettingsRef = doc(db, `churches/${slug}/settings`, 'general');
   const brandingSettingsRef = doc(db, `churches/${slug}/settings`, 'branding');
   const featureSettingsRef = doc(db, `churches/${slug}/settings`, 'features');
+  const subscriptionSettingsRef = doc(db, `churches/${slug}/settings`, 'subscription');
   const churchCenterRef = doc(db, `churches/${slug}/centers`, 'church');
 
   await updateProfile(user, { displayName: input.fullName.trim() });
@@ -42,7 +67,7 @@ export async function createChurchWorkspace(user: User, input: CreateChurchWorks
       name: input.churchName.trim(),
       slug,
       status: 'active',
-      plan: 'starter',
+      plan: selectedPlan.id,
       timezone: input.timezone,
       country: input.country?.trim() || '',
       contactEmail: input.contactEmail.trim(),
@@ -85,6 +110,22 @@ export async function createChurchWorkspace(user: User, input: CreateChurchWorks
   }
 
   try {
+    await setDoc(subscriptionSettingsRef, {
+      planId: selectedPlan.id,
+      planName: selectedPlan.name,
+      status: 'trial',
+      billingCycle: 'manual',
+      isActive: true,
+      trialEndsAt: null,
+      limits: selectedPlan.limits,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    });
+  } catch (error: any) {
+    throw new Error(`Subscription setup failed: ${error?.message || 'permission denied'}`);
+  }
+
+  try {
     await setDoc(generalSettingsRef, {
       timezone: input.timezone,
       locale: 'en',
@@ -117,12 +158,12 @@ export async function createChurchWorkspace(user: User, input: CreateChurchWorks
       reports: true,
       centers: true,
       parents: false,
-      announcements: false,
-      events: false,
-      followUps: false,
-      spotlight: true,
+      announcements: selectedPlan.id !== 'starter',
+      events: selectedPlan.id !== 'starter',
+      followUps: selectedPlan.id === 'premium',
+      spotlight: selectedPlan.id !== 'starter',
       parentPortal: false,
-      customDomain: false,
+      customDomain: selectedPlan.id === 'premium',
       updatedAt: serverTimestamp(),
     });
   } catch (error: any) {
@@ -199,4 +240,135 @@ export async function setOnboardingState(churchId: string, state: 'setup_started
     onboardingState: state,
     updatedAt: serverTimestamp(),
   });
+}
+
+export type OnboardingCenterOption = {
+  id: string;
+  name: string;
+};
+
+export type ProvisioningMemberRecord = {
+  id: string;
+  churchId: string;
+  fullName: string;
+  loginId: string;
+  temporaryPassword?: string;
+  role: Membership['role'];
+  centerIds: string[];
+  centerNames: string[];
+  status: 'pending_provisioning';
+};
+
+export async function listOnboardingCenters(churchId: string): Promise<OnboardingCenterOption[]> {
+  const snapshot = await getDocs(query(collection(db, `churches/${churchId}/centers`), orderBy('createdAt', 'asc')));
+  return snapshot.docs.map((entry) => ({
+    id: entry.id,
+    name: String(entry.data().name || 'Center'),
+  }));
+}
+
+function normalizeLoginName(input: string) {
+  const base = input
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '.')
+    .replace(/^\.+|\.+$/g, '')
+    .replace(/\.{2,}/g, '.');
+
+  return base || 'member';
+}
+
+function buildLoginId(baseName: string, churchId: string, suffix?: number) {
+  const normalizedChurchId = normalizeChurchSlug(churchId);
+  const normalizedName = normalizeLoginName(baseName);
+  const localPart = suffix && suffix > 1 ? `${normalizedName}${suffix}` : normalizedName;
+  return `${localPart}@${normalizedChurchId}.prayloom`;
+}
+
+function generateTemporaryPassword() {
+  const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%';
+  let password = '';
+  for (let index = 0; index < 12; index += 1) {
+    password += alphabet[Math.floor(Math.random() * alphabet.length)];
+  }
+  return password;
+}
+
+async function collectUsedLoginIds(churchId: string) {
+  const used = new Set<string>();
+
+  const memberSnapshot = await getDocs(collection(db, `churches/${churchId}/members`));
+  memberSnapshot.forEach((entry) => {
+    const data = entry.data();
+    const candidate = String(data.loginId || data.email || '').trim().toLowerCase();
+    if (candidate) used.add(candidate);
+  });
+
+  const provisioningSnapshot = await getDocs(collection(db, `churches/${churchId}/provisioningMembers`));
+  provisioningSnapshot.forEach((entry) => {
+    const candidate = String(entry.data().loginId || '').trim().toLowerCase();
+    if (candidate) used.add(candidate);
+  });
+
+  return used;
+}
+
+export async function generateUniqueLoginId(churchId: string, fullName: string) {
+  const usedLoginIds = await collectUsedLoginIds(churchId);
+  let suffix = 1;
+  let candidate = buildLoginId(fullName, churchId);
+
+  while (usedLoginIds.has(candidate.toLowerCase())) {
+    suffix += 1;
+    candidate = buildLoginId(fullName, churchId, suffix);
+  }
+
+  return candidate;
+}
+
+export type SaveProvisioningMemberInput = {
+  fullName: string;
+  role: Membership['role'];
+  centerIds: string[];
+  centerNames: string[];
+};
+
+export async function saveProvisioningMembers(
+  churchId: string,
+  members: SaveProvisioningMemberInput[],
+): Promise<ProvisioningMemberRecord[]> {
+  const created: ProvisioningMemberRecord[] = [];
+  for (const member of members) {
+    const loginId = await generateUniqueLoginId(churchId, member.fullName);
+    const temporaryPassword = generateTemporaryPassword();
+
+    const payload = {
+      churchId,
+      fullName: member.fullName.trim(),
+      loginId,
+      temporaryPassword,
+      role: member.role,
+      centerIds: member.centerIds,
+      centerNames: member.centerNames,
+      status: 'pending_provisioning' as const,
+      mustResetPassword: true,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    };
+
+    const ref = await addDoc(collection(db, `churches/${churchId}/provisioningMembers`), payload);
+    created.push({
+      id: ref.id,
+      churchId,
+      fullName: member.fullName.trim(),
+      loginId,
+      temporaryPassword,
+      role: member.role,
+      centerIds: member.centerIds,
+      centerNames: member.centerNames,
+      status: 'pending_provisioning',
+    });
+  }
+
+  return created;
 }

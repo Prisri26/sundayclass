@@ -1,13 +1,11 @@
-import { useEffect, useState } from 'react';
 import { Redirect, Tabs } from 'expo-router';
-import { View, Text, Platform, StyleSheet, ActivityIndicator, Image } from 'react-native';
+import { View, Text, Platform, StyleSheet, ActivityIndicator } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { Colors, Radius, Shadows } from '../../constants/theme';
-import { onAuthStateChanged, User } from 'firebase/auth';
-import { auth } from '../../lib/firebase';
 import { useChurch } from '../../context/ChurchContext';
 import { useChurchBranding } from '../../hooks/useChurchBranding';
 import { getBrandPalette } from '../../lib/branding';
+import { useAuth } from '../../context/AuthContext';
 
 function TabIcon({
     focused,
@@ -38,21 +36,11 @@ function TabIcon({
 
 export default function TabsLayout() {
     const { activeChurchId, activeMembership, loading, multiTenantEnabled } = useChurch();
+    const { isAuthenticated, mustChangePassword, loading: authLoading } = useAuth();
     const { branding } = useChurchBranding(activeChurchId);
     const palette = getBrandPalette(branding);
-    const [initializing, setInitializing] = useState(true);
-    const [user, setUser] = useState<User | null>(null);
 
-    useEffect(() => {
-        const unsubscribe = onAuthStateChanged(auth, (nextUser) => {
-            setUser(nextUser);
-            setInitializing(false);
-        });
-
-        return unsubscribe;
-    }, []);
-
-    if (initializing || loading) {
+    if (authLoading || loading) {
         return (
             <View style={styles.loadingWrap}>
                 <ActivityIndicator size="large" color={palette.primary} />
@@ -60,8 +48,12 @@ export default function TabsLayout() {
         );
     }
 
-    if (!user) {
+    if (!isAuthenticated) {
         return <Redirect href="/(auth)/login" />;
+    }
+
+    if (mustChangePassword) {
+        return <Redirect href="/(auth)/change-password" />;
     }
 
     if (multiTenantEnabled && !activeMembership) {

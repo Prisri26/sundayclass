@@ -6,6 +6,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useChurch } from '../../context/ChurchContext';
 import Sidebar from '../../components/Sidebar';
 import { addCenter, Center, deleteCenter, Student, subscribeCenters, subscribeStudents, updateCenter } from '../../lib/api';
+import { ChurchSubscription, getChurchSubscription } from '../../lib/subscription';
 
 const emptyForm = {
     name: '',
@@ -38,6 +39,7 @@ export default function CentersPage() {
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState('');
     const [creatingStarters, setCreatingStarters] = useState(false);
+    const [subscription, setSubscription] = useState<ChurchSubscription | null>(null);
 
     useEffect(() => {
         if (!loading && !user) router.replace('/login');
@@ -53,7 +55,14 @@ export default function CentersPage() {
         return subscribeStudents(setStudents, activeChurchId ?? undefined);
     }, [user, activeChurchId, activeMembership]);
 
+    useEffect(() => {
+        if (!activeChurchId) return;
+        getChurchSubscription(activeChurchId).then(setSubscription).catch(() => setSubscription(null));
+    }, [activeChurchId]);
+
     if (loading || !user) return <div className="loading-page"><div className="spinner" /></div>;
+
+    const centerLimit = subscription?.limits.centers ?? null;
 
     const openAdd = () => {
         setForm(emptyForm);
@@ -87,6 +96,10 @@ export default function CentersPage() {
     const handleSave = async () => {
         if (!form.name.trim() || !form.code.trim()) {
             setError('Center name and code are required.');
+            return;
+        }
+        if (!editId && centerLimit !== null && centers.length >= centerLimit) {
+            setError(`Your ${subscription?.planName || 'current'} plan allows up to ${centerLimit} centers. Upgrade the plan before adding more.`);
             return;
         }
 
@@ -126,13 +139,17 @@ export default function CentersPage() {
     const handleCreateStarterCenters = async () => {
         if (!activeChurchId) return;
         const templates = [
-            { name: 'A1', code: 'A1' },
-            { name: 'A2', code: 'A2' },
-            { name: 'A3', code: 'A3' },
+            { name: 'Center 1', code: 'CENTER1' },
+            { name: 'Center 2', code: 'CENTER2' },
+            { name: 'Center 3', code: 'CENTER3' },
         ].filter((template) => !centers.some((center) => center.name === template.name || center.code === template.code));
 
         if (templates.length === 0) {
             setError('Starter centers already exist.');
+            return;
+        }
+        if (centerLimit !== null && centers.length + templates.length > centerLimit) {
+            setError(`Your ${subscription?.planName || 'current'} plan allows up to ${centerLimit} centers. Remove unused centers or upgrade before adding the starter set.`);
             return;
         }
 
@@ -171,11 +188,12 @@ export default function CentersPage() {
                             <div className="admin-hero-eyebrow">Center Structure</div>
                             <div className="admin-hero-title">Organize every Sunday class center under one church workspace</div>
                             <div className="admin-hero-copy">
-                                Keep church-level classes and area centers like A1, A2, and A3 structured clearly so students, members, and attendance all stay aligned.
+                                Keep church-level classes and area centers like Center 1, Center 2, and Center 3 structured clearly so students, members, and attendance all stay aligned.
                             </div>
                             <div className="admin-hero-actions">
                                 <div className="admin-hero-chip">🏠 {centers.length} total centers</div>
                                 <div className="admin-hero-chip">👥 {students.length} assigned students</div>
+                                <div className="admin-hero-chip">📦 {subscription?.planName || 'Starter'} plan</div>
                             </div>
                         </div>
                         <div className="admin-hero-panel">
@@ -201,11 +219,14 @@ export default function CentersPage() {
                 <div className="topbar">
                     <div>
                         <div className="topbar-title">🏠 Centers</div>
-                        <div className="topbar-meta">Manage Sunday class centers and church-level groups.</div>
+                        <div className="topbar-meta">
+                            Manage Sunday class centers and church-level groups.
+                            {centerLimit !== null ? ` ${centers.length}/${centerLimit} centers used.` : ' Unlimited center capacity.'}
+                        </div>
                     </div>
                     <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
                         <button className="btn btn-ghost" onClick={handleCreateStarterCenters} disabled={creatingStarters}>
-                            {creatingStarters ? 'Creating...' : '⚡ Add A1/A2/A3'}
+                            {creatingStarters ? 'Creating...' : '⚡ Add Center 1/2/3'}
                         </button>
                         <button className="btn btn-primary" onClick={openAdd}>➕ Add Center</button>
                     </div>
@@ -246,7 +267,7 @@ export default function CentersPage() {
                             <div>
                                 <div className="section-title">Center cleanup</div>
                                 <div className="section-copy">
-                                    Review old labels and unused centers so the church uses clean center names like A1, A2, A3, or Church.
+                                    Review old labels and unused centers so the church uses clean center names like Center 1, Center 2, Center 3, or Church.
                                 </div>
                             </div>
                             <button className="btn btn-ghost" onClick={() => router.push('/students')}>Open Students</button>
@@ -311,7 +332,7 @@ export default function CentersPage() {
                     <div className="empty-state">
                         <div className="empty-state-icon">🏠</div>
                         <div className="empty-state-text">No centers yet</div>
-                        <div className="empty-state-sub">Create your church center and area centers like A1, A2, and A3.</div>
+                        <div className="empty-state-sub">Create your church center and area centers like Center 1, Center 2, and Center 3.</div>
                     </div>
                 ) : (
                     <div style={{ display: 'grid', gap: 16 }}>

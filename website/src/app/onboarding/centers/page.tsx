@@ -1,4 +1,6 @@
 'use client';
+import Image from 'next/image';
+import Link from 'next/link';
 import { Suspense, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { addOnboardingCenter } from '../../../lib/onboarding';
@@ -70,18 +72,21 @@ function CentersOnboardingContent() {
       <div className="onboard-layout">
         <aside className="onboard-sidebar">
           <div className="onboard-sidebar-content">
-            <div className="onboard-brand">PrayLoom</div>
+            <Link href="/" className="onboard-brand">
+              <Image src="/prayloomlogo.svg" alt="PrayLoom" width={196} height={58} className="onboard-brand-logo" />
+            </Link>
             <div className="onboard-progress-block">
               <div className="onboard-progress-label">Progress</div>
               <div className="onboard-progress-bar">
-                <span style={{ width: '75%' }} />
+                <span style={{ width: '80%' }} />
               </div>
-              <div className="onboard-progress-copy">Step 3 of 4: Center Setup</div>
+              <div className="onboard-progress-copy">Step 4 of 5: Center Setup</div>
               <div className="onboard-checklist">
+                <div className="onboard-check-item"><div className="onboard-check-icon">✓</div><span>Plan Selection</span></div>
                 <div className="onboard-check-item"><div className="onboard-check-icon">✓</div><span>Workspace Basics</span></div>
                 <div className="onboard-check-item"><div className="onboard-check-icon">✓</div><span>Identity &amp; Branding</span></div>
-                <div className="onboard-check-item active"><div className="onboard-check-icon">3</div><span>Center Setup</span></div>
-                <div className="onboard-check-item"><div className="onboard-check-icon">4</div><span>Team Invitation</span></div>
+                <div className="onboard-check-item active"><div className="onboard-check-icon">4</div><span>Center Setup</span></div>
+                <div className="onboard-check-item"><div className="onboard-check-icon">5</div><span>Team Invitation</span></div>
               </div>
             </div>
           </div>
@@ -93,14 +98,21 @@ function CentersOnboardingContent() {
         </aside>
 
         <main className="onboard-main">
-          <div className="onboard-wrap" style={{ maxWidth: '1120px' }}>
-            <div className="onboard-step">Step 3 of 4</div>
-            <h1 className="onboard-title">Create your Sunday class centers.</h1>
-            <p className="onboard-copy">Add the church campus and any local centers where Sunday class is conducted.</p>
+          <div className="onboard-scroll-region">
+            <div className="onboard-wrap" style={{ maxWidth: '1120px' }}>
+              <div className="onboard-step">Step 4 of 5</div>
+              <h1 className="onboard-title">Create your Sunday class centers.</h1>
+              <p className="onboard-copy">Add the church campus and any local centers where Sunday class is conducted.</p>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'minmax(320px, 0.92fr) minmax(360px, 1.08fr)', gap: '42px', marginTop: '38px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'minmax(320px, 0.92fr) minmax(360px, 1.08fr)', gap: '42px', marginTop: '38px' }}>
               <section>
                 <div className="onboard-panel" style={{ marginTop: 0, background: '#f2f3ff' }}>
+                  <div className="onboard-panel-intro">
+                    <div className="onboard-panel-intro-title">Center structure</div>
+                    <div className="onboard-panel-intro-copy">
+                      Add the church campus and any local teaching centers now. You can refine hosts, addresses, and attendance ownership later in the full workspace.
+                    </div>
+                  </div>
                   <div className="onboard-grid-2">
                     <div className="onboard-field">
                       <label className="onboard-label">Center Name</label>
@@ -130,15 +142,6 @@ function CentersOnboardingContent() {
 
                   <button type="button" className="onboard-primary-btn" style={{ width: '100%', marginTop: '22px' }} onClick={addDraftCenter}>
                     Add Center
-                  </button>
-                </div>
-
-                <div className="onboard-actions">
-                  <button type="button" className="onboard-primary-btn" onClick={() => goNext(false)} disabled={saving}>
-                    {saving ? 'Saving...' : 'Continue to Members'}
-                  </button>
-                  <button type="button" className="onboard-ghost-btn" onClick={() => goNext(true)} disabled={saving}>
-                    Skip for now
                   </button>
                 </div>
               </section>
@@ -183,6 +186,23 @@ function CentersOnboardingContent() {
                   </div>
                 ) : null}
               </section>
+            </div>
+          </div>
+          </div>
+
+          <div className="onboard-footer-bar">
+            <div className="onboard-footer-actions">
+              <button type="button" className="onboard-ghost-btn" onClick={() => router.push(`/onboarding/branding?church=${encodeURIComponent(churchId)}`)} disabled={saving}>
+                Back
+              </button>
+              <div className="onboard-footer-group">
+                <button type="button" className="onboard-ghost-btn" onClick={() => goNext(true)} disabled={saving}>
+                  Skip for now
+                </button>
+                <button type="button" className="onboard-primary-btn" onClick={() => goNext(false)} disabled={saving}>
+                  {saving ? 'Saving...' : 'Continue to Members'}
+                </button>
+              </div>
             </div>
           </div>
         </main>

@@ -44,6 +44,7 @@ export function ChurchProvider({ children }: { children: ReactNode }) {
     const skipSubscription =
       pathname === '/login'
       || pathname === '/signup'
+      || pathname === '/change-password'
       || pathname.startsWith('/onboarding');
 
     if (!MULTI_TENANT_ENABLED) {

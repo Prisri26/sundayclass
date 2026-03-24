@@ -19,6 +19,20 @@ export type MemberRecord = Membership & {
   id: string;
 };
 
+export type ProvisioningMemberRecord = {
+  id: string;
+  churchId: string;
+  fullName: string;
+  loginId: string;
+  temporaryPassword?: string;
+  role: Membership['role'];
+  centerIds: string[];
+  centerNames: string[];
+  status: 'pending_provisioning' | 'provisioned' | 'failed';
+  authUserId?: string;
+  failureReason?: string;
+};
+
 export type UpsertMemberInput = {
   userId: string;
   email?: string;
@@ -33,6 +47,18 @@ function normalizeMember(data: Omit<MemberRecord, 'id'>, id: string): MemberReco
     id,
     ...data,
     centerIds: data.centerIds ?? [],
+  };
+}
+
+function normalizeProvisioningMember(
+  data: Omit<ProvisioningMemberRecord, 'id'>,
+  id: string,
+): ProvisioningMemberRecord {
+  return {
+    id,
+    ...data,
+    centerIds: data.centerIds ?? [],
+    centerNames: data.centerNames ?? [],
   };
 }
 
@@ -76,4 +102,19 @@ export async function upsertMember(churchId: string, input: UpsertMemberInput) {
     updatedAt: Timestamp.now(),
     createdAt: Timestamp.now(),
   }, { merge: true });
+}
+
+export function subscribeProvisioningMembers(
+  churchId: string,
+  cb: (members: ProvisioningMemberRecord[]) => void,
+  onError?: (error: Error) => void,
+) {
+  const q = query(collection(db, `churches/${churchId}/provisioningMembers`), orderBy('updatedAt', 'desc'));
+  return onSnapshot(
+    q,
+    (snap: QuerySnapshot<DocumentData>) => {
+      cb(snap.docs.map((entry) => normalizeProvisioningMember(entry.data() as Omit<ProvisioningMemberRecord, 'id'>, entry.id)));
+    },
+    (error) => onError?.(error as Error),
+  );
 }

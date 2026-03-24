@@ -1,7 +1,9 @@
 'use client';
 
+import Image from 'next/image';
 import Link from 'next/link';
 import { useAuth } from '../context/AuthContext';
+import { PLAN_DEFINITIONS } from '../lib/plans';
 
 const navItems = ['Platform', 'Solutions', 'Resources'];
 
@@ -36,7 +38,14 @@ export default function HomePage() {
       <header className="landing-header">
         <div className="landing-header-inner">
           <Link href="/" className="landing-brand">
-            <div className="landing-brand-word">PrayLoom</div>
+            <Image
+              src="/prayloomlogo.svg"
+              alt="PrayLoom"
+              width={196}
+              height={62}
+              className="landing-brand-logo"
+              priority
+            />
           </Link>
 
           <nav className="landing-nav" aria-label="Primary">
@@ -71,6 +80,13 @@ export default function HomePage() {
           <div className="landing-hero-shell">
             <div className="landing-hero-copy-column">
               <div className="landing-hero-badge">PrayLoom</div>
+              <Image
+                src="/prayloomlogo.svg"
+                alt="PrayLoom"
+                width={244}
+                height={78}
+                className="landing-hero-logo"
+              />
               <h1 className="landing-hero-title">
                 Church operations,
                 <span> beautifully organized.</span>
@@ -110,6 +126,16 @@ export default function HomePage() {
 
             <div className="landing-hero-stage">
               <div className="landing-stage-window">
+                <div className="landing-stage-brand-card">
+                  <Image
+                    src="/prayloomlogo.svg"
+                    alt="PrayLoom"
+                    width={210}
+                    height={66}
+                    className="landing-stage-brand-logo"
+                  />
+                </div>
+
                 <div className="landing-stage-card landing-stage-card-floating">
                   <div className="landing-stage-mini-label">Active Ministries</div>
                   <div className="landing-stage-mini-row">
@@ -185,6 +211,52 @@ export default function HomePage() {
                 <div className="landing-feature-copy">{feature.copy}</div>
               </div>
             ))}
+          </div>
+        </section>
+
+        <section className="landing-pricing" id="pricing">
+          <div className="landing-pricing-shell">
+            <div className="landing-section-head">
+              <div className="landing-section-title">
+                Pricing for every
+                <span> church season.</span>
+              </div>
+              <div className="landing-feature-intro">
+                Start with a simple structured plan, grow into richer reporting and spotlight moments, and expand into premium support when your ministry is ready.
+              </div>
+            </div>
+
+            <div className="landing-pricing-grid">
+              {PLAN_DEFINITIONS.map((plan) => (
+                <div key={plan.id} className={`landing-pricing-card tone-${plan.accent}`}>
+                  <div className="landing-pricing-head">
+                    <div>
+                      <div className="landing-pricing-name">{plan.name}</div>
+                      <div className="landing-pricing-label">{plan.priceLabel}</div>
+                    </div>
+                    <span className="landing-pricing-pill">{plan.id === 'growth' ? 'Popular' : plan.id === 'premium' ? 'Scale' : 'Launch'}</span>
+                  </div>
+                  <div className="landing-pricing-subtitle">{plan.subtitle}</div>
+                  <div className="landing-pricing-description">{plan.description}</div>
+                  <div className="landing-pricing-limits">
+                    <div><strong>{plan.limits.centers ?? 'Unlimited'}</strong> centers</div>
+                    <div><strong>{plan.limits.members ?? 'Unlimited'}</strong> members</div>
+                    <div><strong>{plan.limits.students ?? 'Unlimited'}</strong> students</div>
+                  </div>
+                  <div className="landing-pricing-list">
+                    {plan.features.map((feature) => (
+                      <div key={feature} className="landing-pricing-item">
+                        <span className="landing-pricing-check">•</span>
+                        <span>{feature}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <Link href="/signup" className="landing-primary-button">
+                    Choose {plan.name}
+                  </Link>
+                </div>
+              ))}
+            </div>
           </div>
         </section>
 
