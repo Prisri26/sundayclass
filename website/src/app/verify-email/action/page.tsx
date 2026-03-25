@@ -3,14 +3,14 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { applyActionCode } from 'firebase/auth';
-import { useEffect, useMemo, useState } from 'react';
+import { Suspense, useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { auth } from '../../../lib/firebase';
 import { mapFirebaseAuthError } from '../../../lib/auth';
 
 type VerificationState = 'checking' | 'success' | 'error';
 
-export default function VerifyEmailActionPage() {
+function VerifyEmailActionContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [state, setState] = useState<VerificationState>('checking');
@@ -166,5 +166,13 @@ export default function VerifyEmailActionPage() {
         </section>
       </main>
     </div>
+  );
+}
+
+export default function VerifyEmailActionPage() {
+  return (
+    <Suspense fallback={<div className="loading-page"><div className="spinner" /></div>}>
+      <VerifyEmailActionContent />
+    </Suspense>
   );
 }
