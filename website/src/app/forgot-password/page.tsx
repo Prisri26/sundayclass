@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import Link from 'next/link';
 import { useState } from 'react';
 import { sendPasswordResetEmail } from 'firebase/auth';
@@ -29,22 +30,81 @@ export default function ForgotPasswordPage() {
   };
 
   return (
-    <div className="auth-shell">
-      <main className="auth-stage" style={{ gridTemplateColumns: '1fr', maxWidth: 720 }}>
-        <section className="auth-panel-wrap" style={{ width: '100%' }}>
-          <div className="auth-panel">
-            <div className="auth-panel-badge">Account Recovery</div>
-            <h1 className="auth-panel-title">Reset your password.</h1>
-            <p className="auth-panel-copy">
-              Enter your login email and we&apos;ll send a secure reset link.
-            </p>
+    <div className="auth-shell auth-shell-login">
+      <header className="auth-topbar">
+        <div className="auth-topbar-inner">
+          <Link href="/" className="auth-topbar-brand">
+            <Image src="/prayloomlogo.svg" alt="PrayLoom" width={206} height={58} className="auth-topbar-brand-logo" />
+          </Link>
+          <div className="auth-topbar-links">
+            <a href="#!">Help Center</a>
+            <a href="#!">Security</a>
+          </div>
+        </div>
+      </header>
 
-            <form onSubmit={handleReset} className="auth-panel-form">
-              <div className="auth-field">
-                <label className="auth-label">Email Address</label>
+      <main className="auth-stage">
+        <section className="login-story">
+          <div className="login-story-visual-card">
+            <div className="login-story-visual-glow login-story-visual-glow-a" />
+            <div className="login-story-visual-glow login-story-visual-glow-b" />
+            <Image
+              src="/prayloomlogo.svg"
+              alt="PrayLoom"
+              width={340}
+              height={340}
+              className="login-story-logo"
+              priority
+            />
+            <div className="login-story-visual-note login-story-visual-note-top">
+              <span className="login-story-note-label">Recovery</span>
+              <strong>Secure access, restored calmly.</strong>
+            </div>
+            <div className="login-story-visual-note login-story-visual-note-bottom">
+              <span className="login-story-note-label">Supports</span>
+              <strong>Admin email and church login IDs.</strong>
+            </div>
+          </div>
+
+          <div className="login-story-copyblock">
+            <h1 className="login-story-title">
+              Recover access without breaking the flow of ministry.
+            </h1>
+            <p className="login-story-copy">
+              PrayLoom lets church admins and team members restore access safely, whether they sign in with a personal admin email or a generated church login ID.
+            </p>
+            <div className="login-story-highlights">
+              <div className="login-story-highlight">
+                <span className="login-story-highlight-value">Email admins</span>
+                <span className="login-story-highlight-copy">Reset links work for founding admins and workspace owners.</span>
+              </div>
+              <div className="login-story-highlight">
+                <span className="login-story-highlight-value">Church IDs</span>
+                <span className="login-story-highlight-copy">Teachers and volunteers can also recover PrayLoom-issued login IDs.</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="login-panel-wrap">
+          <div className="login-panel">
+            <div className="login-panel-brand">
+              <Image src="/prayloomlogo.svg" alt="PrayLoom" width={180} height={52} className="login-panel-brand-logo" />
+            </div>
+
+            <div className="login-panel-intro">
+              <h1 className="login-panel-title">Reset your password.</h1>
+              <p className="login-panel-copy">
+                Enter your login email and PrayLoom will send a secure reset link to continue the sign-in flow.
+              </p>
+            </div>
+
+            <form onSubmit={handleReset} className="login-panel-form">
+              <div className="login-panel-field">
+                <label className="login-panel-label">Email Address</label>
                 <input
                   type="email"
-                  className="auth-input"
+                  className="login-panel-input"
                   placeholder="admin@church.org or john@hosanna.prayloom"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
@@ -53,25 +113,27 @@ export default function ForgotPasswordPage() {
               </div>
 
               {message ? (
-                <div style={{ background: '#e8f7ee', color: '#116634', padding: '12px 14px', borderRadius: '12px', fontSize: '13px' }}>
+                <div className="signup-panel-error" style={{ background: '#E8F4EC', color: '#17603A' }}>
                   {message}
                 </div>
               ) : null}
 
-              {error ? (
-                <div style={{ background: '#ffdad6', color: '#93000a', padding: '12px 14px', borderRadius: '12px', fontSize: '13px' }}>
-                  {error}
-                </div>
-              ) : null}
+              {error ? <div className="login-panel-error">{error}</div> : null}
 
-              <button type="submit" className="auth-panel-submit" disabled={loading}>
+              <button type="submit" className="login-panel-submit" disabled={loading}>
                 {loading ? 'Sending...' : 'Send Reset Link'}
               </button>
+
+              <div className="login-panel-helper">
+                Use the latest email that belongs to the account you want to restore. Church-issued login IDs also work here.
+              </div>
             </form>
 
-            <div className="auth-panel-footer">
+            <div className="login-panel-footer">
               Remembered your password?
-              <Link href="/login" className="auth-panel-link"> Return to sign in</Link>
+              <Link href="/login" className="login-panel-link">
+                {' '}Return to sign in
+              </Link>
             </div>
           </div>
         </section>

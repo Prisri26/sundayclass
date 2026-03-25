@@ -1,3 +1,4 @@
+import type { ActionCodeSettings } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from './firebase';
 
@@ -44,6 +45,15 @@ export function mapFirebaseAuthError(error: any) {
     default:
       return error?.message || 'Authentication failed. Please try again.';
   }
+}
+
+export function getEmailVerificationActionSettings(origin?: string): ActionCodeSettings {
+  const baseUrl = origin || (typeof window !== 'undefined' ? window.location.origin : '');
+
+  return {
+    url: `${baseUrl}/verify-email/action`,
+    handleCodeInApp: true,
+  };
 }
 
 export async function getUserSecurityState(userId: string) {

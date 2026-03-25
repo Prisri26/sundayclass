@@ -1,14 +1,20 @@
 'use client';
-import Image from 'next/image';
-import Link from 'next/link';
 import { Suspense, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { uploadChurchLogo } from '../../../lib/api';
 import { saveBrandingSetup } from '../../../lib/onboarding';
+import OnboardingSidebar from '../../../components/onboarding/OnboardingSidebar';
 
 const DEFAULT_PRIMARY = '#392cc1';
 const DEFAULT_SECONDARY = '#7c3aed';
 const DEFAULT_ACCENT = '#f59e0b';
+const BRAND_SWATCHES = ['#392cc1', '#2463eb', '#0f766e', '#b45309', '#be185d', '#4f46e5', '#7c3aed', '#f59e0b'];
+const BRAND_PALETTES = [
+  { id: 'prayloom-classic', name: 'PrayLoom Classic', primary: '#392cc1', secondary: '#7c3aed', accent: '#f59e0b' },
+  { id: 'cathedral-blue', name: 'Cathedral Blue', primary: '#1d4ed8', secondary: '#0f766e', accent: '#f59e0b' },
+  { id: 'stone-and-ink', name: 'Stone & Ink', primary: '#1f2937', secondary: '#475569', accent: '#ca8a04' },
+  { id: 'warm-ministry', name: 'Warm Ministry', primary: '#7c2d12', secondary: '#9a3412', accent: '#f97316' },
+];
 
 type ColorField = {
   label: string;
@@ -39,6 +45,10 @@ function BrandingOnboardingContent() {
   ];
 
   const canSubmit = useMemo(() => churchId.trim().length > 0, [churchId]);
+  const previewInitials = (shortName || churchDisplayName || churchId || 'PL').slice(0, 2).toUpperCase();
+  const previewTitle = welcomeTitle || `Welcome to ${churchDisplayName || shortName || 'your church workspace'}`;
+  const previewSubtitle =
+    welcomeSubtitle || 'Members will see your church identity first, then continue into secure PrayLoom access and Sunday-class operations.';
 
   const goNext = () => router.push(`/onboarding/centers?church=${encodeURIComponent(churchId)}`);
 
@@ -46,6 +56,12 @@ function BrandingOnboardingContent() {
     const file = event.target.files?.[0] || null;
     setLogoFile(file);
     setLogoPreview(file ? URL.createObjectURL(file) : '');
+  };
+
+  const applyPalette = (palette: (typeof BRAND_PALETTES)[number]) => {
+    setPrimaryColor(palette.primary);
+    setSecondaryColor(palette.secondary);
+    setAccentColor(palette.accent);
   };
 
   const handleSave = async (skip = false) => {
@@ -89,47 +105,21 @@ function BrandingOnboardingContent() {
   return (
     <div className="onboard-shell">
       <div className="onboard-layout">
-        <aside className="onboard-sidebar">
-          <div className="onboard-sidebar-content">
-            <Link href="/" className="onboard-brand">
-              <Image src="/prayloomlogo.svg" alt="PrayLoom" width={196} height={58} className="onboard-brand-logo" />
-            </Link>
-            <div className="onboard-progress-block">
-              <div className="onboard-progress-label">Progress</div>
-              <div className="onboard-progress-bar">
-                <span style={{ width: '60%' }} />
-              </div>
-              <div className="onboard-progress-copy">Step 3 of 5: Identity &amp; Branding</div>
-              <div className="onboard-checklist">
-                <div className="onboard-check-item">
-                  <div className="onboard-check-icon">✓</div>
-                  <span>Plan Selection</span>
-                </div>
-                <div className="onboard-check-item">
-                  <div className="onboard-check-icon">✓</div>
-                  <span>Workspace Basics</span>
-                </div>
-                <div className="onboard-check-item active">
-                  <div className="onboard-check-icon">3</div>
-                  <span>Identity &amp; Branding</span>
-                </div>
-                <div className="onboard-check-item">
-                  <div className="onboard-check-icon">4</div>
-                  <span>Center Setup</span>
-                </div>
-                <div className="onboard-check-item">
-                  <div className="onboard-check-icon">5</div>
-                  <span>Team Invitation</span>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div className="onboard-sidebar-footer">
-            <div className="onboard-sidebar-quote">
-              &ldquo;A church&apos;s identity is the visual handshake of its mission.&rdquo;
-            </div>
-          </div>
-        </aside>
+        <OnboardingSidebar
+          progressPercent={60}
+          progressCopy="Step 3 of 5: Identity & Branding"
+          quote="A church's identity is the visual handshake of its mission."
+          contextEyebrow="Brand Direction"
+          contextTitle="Shape the workspace before teachers ever log in."
+          contextCopy="Logo, color palette, and welcome language should make the church feel recognized the moment someone enters PrayLoom."
+          steps={[
+            { label: 'Plan Selection', status: 'done' },
+            { label: 'Workspace Basics', status: 'done' },
+            { label: 'Identity & Branding', status: 'active' },
+            { label: 'Center Setup', status: 'upcoming' },
+            { label: 'Team Invitation', status: 'upcoming' },
+          ]}
+        />
 
         <main className="onboard-main">
           <div className="onboard-scroll-region">
@@ -139,6 +129,17 @@ function BrandingOnboardingContent() {
               <p className="onboard-copy">
                 Apply your church identity so the workspace feels truly yours. This helps members recognize their digital home.
               </p>
+
+              <div className="onboard-info-strip">
+                <div className="onboard-info-strip-item">
+                  <span className="onboard-info-strip-label">Visible across the product</span>
+                  <strong>Brand choices flow into web workspace screens first, then into the mobile church-code login experience.</strong>
+                </div>
+                <div className="onboard-info-strip-item">
+                  <span className="onboard-info-strip-label">Keep it restrained</span>
+                  <strong>The strongest church workspaces feel branded, calm, and recognizable without looking busy or playful.</strong>
+                </div>
+              </div>
 
               <div className="onboard-panel">
                 <div className="onboard-panel-intro">
@@ -159,21 +160,52 @@ function BrandingOnboardingContent() {
                   </div>
                 </div>
 
-                <div style={{ marginTop: 28 }}>
-                  <div className="onboard-label" style={{ marginBottom: 12 }}>Visual Assets</div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 24, flexWrap: 'wrap' }}>
-                    <label style={{ display: 'inline-grid', gap: 10, cursor: 'pointer' }}>
-                      <div style={{ width: 128, height: 128, borderRadius: 16, background: '#f2f3ff', border: '2px dashed rgba(199,196,216,0.5)', display: 'grid', placeItems: 'center', overflow: 'hidden' }}>
+                <div className="onboard-brand-builder">
+                  <div className="onboard-brand-builder-main">
+                    <div className="onboard-label" style={{ marginBottom: 12 }}>Visual Assets</div>
+                    <div className="onboard-brand-upload-row">
+                      <label className="onboard-brand-upload">
                         {logoPreview ? (
-                          <img src={logoPreview} alt="Logo preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                          <img src={logoPreview} alt="Logo preview" className="onboard-brand-upload-preview" />
                         ) : (
-                          <span style={{ fontSize: 32, color: 'rgba(119,117,135,0.5)' }}>＋</span>
+                          <div className="onboard-brand-upload-empty">
+                            <span>+</span>
+                            <strong>Add logo</strong>
+                          </div>
                         )}
+                        <input type="file" accept="image/*" onChange={handleLogoChange} style={{ display: 'none' }} />
+                      </label>
+                      <div className="onboard-brand-upload-copy">
+                        <div className="onboard-helper-title">Upload a logo your members will recognize instantly.</div>
+                        <div className="onboard-helper-copy">
+                          Recommended: PNG or SVG with transparent background. Your uploaded logo will appear across web workspace surfaces and the mobile church-code login flow.
+                        </div>
+                        <div className="onboard-brand-upload-notes">
+                          <span>Transparent background preferred</span>
+                          <span>Square logos work best</span>
+                        </div>
                       </div>
-                      <input type="file" accept="image/*" onChange={handleLogoChange} style={{ display: 'none' }} />
-                    </label>
-                    <div className="onboard-helper-copy" style={{ maxWidth: 320 }}>
-                      Recommended: PNG or SVG with transparent background. Your uploaded logo will be used in the church workspace and future white-label moments.
+                    </div>
+                  </div>
+
+                  <div className="onboard-brand-builder-side">
+                    <div className="onboard-label" style={{ marginBottom: 12 }}>Quick Palette Direction</div>
+                    <div className="onboard-palette-grid">
+                      {BRAND_PALETTES.map((palette) => (
+                        <button
+                          type="button"
+                          key={palette.id}
+                          className="onboard-palette-card"
+                          onClick={() => applyPalette(palette)}
+                        >
+                          <div className="onboard-palette-card-swatches">
+                            <span style={{ background: palette.primary }} />
+                            <span style={{ background: palette.secondary }} />
+                            <span style={{ background: palette.accent }} />
+                          </div>
+                          <div className="onboard-palette-card-name">{palette.name}</div>
+                        </button>
+                      ))}
                     </div>
                   </div>
                 </div>
@@ -185,13 +217,32 @@ function BrandingOnboardingContent() {
                       <div key={field.label} className="onboard-color-card">
                         <div className="onboard-color-head">
                           <span className="onboard-label" style={{ fontSize: 11 }}>{field.label}</span>
-                          <div className="onboard-color-dot" style={{ background: field.value }} />
+                          <label className="onboard-color-picker-button" style={{ background: field.value }}>
+                            <input
+                              type="color"
+                              value={field.value}
+                              onChange={(e) => field.setValue(e.target.value)}
+                              className="onboard-color-picker-input"
+                            />
+                          </label>
                         </div>
                         <input
                           className="onboard-input"
                           value={field.value}
                           onChange={(e) => field.setValue(e.target.value)}
                         />
+                        <div className="onboard-color-swatch-row">
+                          {BRAND_SWATCHES.map((swatch) => (
+                            <button
+                              type="button"
+                              key={`${field.label}-${swatch}`}
+                              className={`onboard-color-swatch${field.value.toLowerCase() === swatch.toLowerCase() ? ' active' : ''}`}
+                              style={{ background: swatch }}
+                              onClick={() => field.setValue(swatch)}
+                              aria-label={`${field.label} ${swatch}`}
+                            />
+                          ))}
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -206,6 +257,41 @@ function BrandingOnboardingContent() {
                   <div className="onboard-field">
                     <label className="onboard-label" style={{ fontSize: 11 }}>Welcome Subtitle</label>
                     <textarea className="onboard-textarea" rows={3} value={welcomeSubtitle} onChange={(e) => setWelcomeSubtitle(e.target.value)} placeholder="Enter a brief greeting for your community members..." />
+                  </div>
+                </div>
+
+                <div className="onboard-brand-preview">
+                  <div className="onboard-brand-preview-header">
+                    <div>
+                      <div className="onboard-context-eyebrow">Live Preview</div>
+                      <div className="onboard-brand-preview-title">{churchDisplayName || shortName || churchId || 'Your church workspace'}</div>
+                    </div>
+                    <div className="onboard-brand-preview-palette">
+                      <span style={{ background: primaryColor }} />
+                      <span style={{ background: secondaryColor }} />
+                      <span style={{ background: accentColor }} />
+                    </div>
+                  </div>
+                  <div className="onboard-brand-preview-card">
+                    <div className="onboard-brand-preview-badge" style={{ background: `linear-gradient(135deg, ${primaryColor} 0%, ${secondaryColor} 100%)` }}>
+                      {logoPreview ? <img src={logoPreview} alt="Logo preview" className="onboard-brand-preview-badge-logo" /> : previewInitials}
+                    </div>
+                    <div>
+                      <div className="onboard-brand-preview-headline">{previewTitle}</div>
+                      <div className="onboard-brand-preview-copy">{previewSubtitle}</div>
+                    </div>
+                  </div>
+                  <div className="onboard-brand-preview-surface">
+                    <div className="onboard-brand-preview-surface-top" style={{ background: `linear-gradient(135deg, ${primaryColor} 0%, ${secondaryColor} 100%)` }}>
+                      <div className="onboard-brand-preview-surface-chip">Church Workspace</div>
+                      <div className="onboard-brand-preview-surface-stat" style={{ background: accentColor }} />
+                    </div>
+                    <div className="onboard-brand-preview-surface-body">
+                      <div className="onboard-brand-preview-surface-card" />
+                      <div className="onboard-brand-preview-surface-card" />
+                      <div className="onboard-brand-preview-surface-line" style={{ background: `${secondaryColor}22` }} />
+                      <div className="onboard-brand-preview-surface-line short" style={{ background: `${accentColor}33` }} />
+                    </div>
                   </div>
                 </div>
 

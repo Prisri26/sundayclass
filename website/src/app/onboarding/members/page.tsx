@@ -1,6 +1,4 @@
 'use client';
-import Image from 'next/image';
-import Link from 'next/link';
 import { Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
@@ -10,6 +8,7 @@ import {
   type OnboardingCenterOption,
   type ProvisioningMemberRecord,
 } from '../../../lib/onboarding';
+import OnboardingSidebar from '../../../components/onboarding/OnboardingSidebar';
 
 type DraftRole = 'church_admin' | 'teacher' | 'volunteer' | 'viewer';
 
@@ -148,32 +147,21 @@ function MembersOnboardingContent() {
   return (
     <div className="onboard-shell">
       <div className="onboard-layout">
-        <aside className="onboard-sidebar">
-          <div className="onboard-sidebar-content">
-            <Link href="/" className="onboard-brand">
-              <Image src="/prayloomlogo.svg" alt="PrayLoom" width={196} height={58} className="onboard-brand-logo" />
-            </Link>
-            <div className="onboard-progress-block">
-              <div className="onboard-progress-label">Progress</div>
-              <div className="onboard-progress-bar">
-                <span style={{ width: '100%' }} />
-              </div>
-              <div className="onboard-progress-copy">Step 5 of 5: Team Provisioning</div>
-              <div className="onboard-checklist">
-                <div className="onboard-check-item"><div className="onboard-check-icon">✓</div><span>Plan Selection</span></div>
-                <div className="onboard-check-item"><div className="onboard-check-icon">✓</div><span>Workspace Basics</span></div>
-                <div className="onboard-check-item"><div className="onboard-check-icon">✓</div><span>Identity &amp; Branding</span></div>
-                <div className="onboard-check-item"><div className="onboard-check-icon">✓</div><span>Center Setup</span></div>
-                <div className="onboard-check-item active"><div className="onboard-check-icon">5</div><span>Team Provisioning</span></div>
-              </div>
-            </div>
-          </div>
-          <div className="onboard-sidebar-footer">
-            <div className="onboard-sidebar-quote">
-              &ldquo;Prayerful access is also disciplined access. Give every teacher a real identity from day one.&rdquo;
-            </div>
-          </div>
-        </aside>
+        <OnboardingSidebar
+          progressPercent={100}
+          progressCopy="Step 5 of 5: Team Provisioning"
+          quote="Prayerful access is also disciplined access. Give every teacher a real identity from day one."
+          contextEyebrow="Account Provisioning"
+          contextTitle="Create real identities before ministry begins."
+          contextCopy="Each teacher, volunteer, or viewer should receive a unique PrayLoom login instead of shared credentials or borrowed devices."
+          steps={[
+            { label: 'Plan Selection', status: 'done' },
+            { label: 'Workspace Basics', status: 'done' },
+            { label: 'Identity & Branding', status: 'done' },
+            { label: 'Center Setup', status: 'done' },
+            { label: 'Team Invitation', status: 'active' },
+          ]}
+        />
 
         <main className="onboard-main">
           <div className="onboard-scroll-region">
@@ -183,6 +171,17 @@ function MembersOnboardingContent() {
               <p className="onboard-copy">
                 Generate PrayLoom login IDs for teachers and volunteers so your church can start with structured access instead of shared credentials.
               </p>
+
+              <div className="onboard-info-strip">
+                <div className="onboard-info-strip-item">
+                  <span className="onboard-info-strip-label">Teacher experience</span>
+                  <strong>Members can enter the mobile app through church code, see branded context first, then sign in with their PrayLoom login ID.</strong>
+                </div>
+                <div className="onboard-info-strip-item">
+                  <span className="onboard-info-strip-label">Security standard</span>
+                  <strong>Temporary passwords are for first entry only. PrayLoom then forces a personal password change immediately.</strong>
+                </div>
+              </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: 'minmax(320px, 0.92fr) minmax(360px, 1.08fr)', gap: '42px', marginTop: '38px' }}>
                 <section>

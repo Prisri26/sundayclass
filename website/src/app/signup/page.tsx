@@ -7,7 +7,7 @@ import { createUserWithEmailAndPassword, sendEmailVerification, updateProfile } 
 import { auth } from '../../lib/firebase';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../context/AuthContext';
-import { mapFirebaseAuthError, normalizeAuthIdentifier, validateSignupPassword } from '../../lib/auth';
+import { getEmailVerificationActionSettings, mapFirebaseAuthError, normalizeAuthIdentifier, validateSignupPassword } from '../../lib/auth';
 
 export default function SignupPage() {
   const router = useRouter();
@@ -49,7 +49,7 @@ export default function SignupPage() {
     try {
       const credential = await createUserWithEmailAndPassword(auth, normalizeAuthIdentifier(email), password);
       await updateProfile(credential.user, { displayName: fullName.trim() });
-      await sendEmailVerification(credential.user);
+      await sendEmailVerification(credential.user, getEmailVerificationActionSettings(window.location.origin));
       router.push('/verify-email');
     } catch (err: any) {
       setError(mapFirebaseAuthError(err));

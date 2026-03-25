@@ -1,73 +1,11 @@
 'use client';
 
-import Image from 'next/image';
-import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../context/AuthContext';
 import { createChurchWorkspace, getSelectedPlan, normalizeChurchSlug } from '../../lib/onboarding';
 import { getPlanDefinition, type PlanId } from '../../lib/plans';
-
-function ProgressSidebar({ selectedPlanId }: { selectedPlanId: PlanId | '' }) {
-  const selectedPlan = getPlanDefinition(selectedPlanId || undefined);
-
-  return (
-    <aside className="onboard-sidebar">
-      <div className="onboard-sidebar-content">
-        <Link href="/" className="onboard-brand">
-          <Image src="/prayloomlogo.svg" alt="PrayLoom" width={196} height={58} className="onboard-brand-logo" />
-        </Link>
-
-        <div className="onboard-progress-block">
-          <div className="onboard-progress-label">Progress</div>
-          <div className="onboard-progress-bar">
-            <span style={{ width: '40%' }} />
-          </div>
-          <div className="onboard-progress-copy">Step 2 of 5: Workspace Basics</div>
-
-          <div className="onboard-checklist">
-            <div className="onboard-check-item">
-              <div className="onboard-check-icon">✓</div>
-              <span>Plan Selection</span>
-            </div>
-            <div className="onboard-check-item active">
-              <div className="onboard-check-icon">2</div>
-              <span>Workspace Basics</span>
-            </div>
-            <div className="onboard-check-item">
-              <div className="onboard-check-icon">3</div>
-              <span>Identity &amp; Branding</span>
-            </div>
-            <div className="onboard-check-item">
-              <div className="onboard-check-icon">4</div>
-              <span>Center Setup</span>
-            </div>
-            <div className="onboard-check-item">
-              <div className="onboard-check-icon">5</div>
-              <span>Team Invitation</span>
-            </div>
-          </div>
-        </div>
-
-        <div className="onboard-plan-summary">
-          <div className="onboard-plan-summary-label">Selected plan</div>
-          <div className="onboard-plan-summary-name">{selectedPlan.name}</div>
-          <div className="onboard-plan-summary-copy">{selectedPlan.subtitle}</div>
-          <div className="onboard-plan-summary-meta">
-            <span>{selectedPlan.limits.centers ?? 'Unlimited'} centers</span>
-            <span>{selectedPlan.limits.members ?? 'Unlimited'} members</span>
-          </div>
-        </div>
-      </div>
-
-      <div className="onboard-sidebar-footer">
-        <div className="onboard-sidebar-quote">
-          &ldquo;A church workspace should feel as thoughtful as the ministry it serves.&rdquo;
-        </div>
-      </div>
-    </aside>
-  );
-}
+import OnboardingSidebar from '../../components/onboarding/OnboardingSidebar';
 
 export default function OnboardingPage() {
   const router = useRouter();
@@ -159,7 +97,25 @@ export default function OnboardingPage() {
   return (
     <div className="onboard-shell">
       <div className="onboard-layout">
-        <ProgressSidebar selectedPlanId={selectedPlanId} />
+        <OnboardingSidebar
+          progressPercent={40}
+          progressCopy="Step 2 of 5: Workspace Basics"
+          quote="A church workspace should feel as thoughtful as the ministry it serves."
+          contextEyebrow="Selected Plan"
+          contextTitle={getPlanDefinition(selectedPlanId || undefined).name}
+          contextCopy={getPlanDefinition(selectedPlanId || undefined).subtitle}
+          contextMeta={[
+            { label: 'centers', value: String(getPlanDefinition(selectedPlanId || undefined).limits.centers ?? 'Unlimited') },
+            { label: 'members', value: String(getPlanDefinition(selectedPlanId || undefined).limits.members ?? 'Unlimited') },
+          ]}
+          steps={[
+            { label: 'Plan Selection', status: 'done' },
+            { label: 'Workspace Basics', status: 'active' },
+            { label: 'Identity & Branding', status: 'upcoming' },
+            { label: 'Center Setup', status: 'upcoming' },
+            { label: 'Team Invitation', status: 'upcoming' },
+          ]}
+        />
 
         <main className="onboard-main">
           <div className="onboard-scroll-region">
@@ -169,6 +125,17 @@ export default function OnboardingPage() {
               <p className="onboard-copy">
                 This becomes the main branded workspace for your church on PrayLoom.
               </p>
+
+              <div className="onboard-info-strip">
+                <div className="onboard-info-strip-item">
+                  <span className="onboard-info-strip-label">What this creates</span>
+                  <strong>Your root church profile, workspace slug, and the first shared identity for every later setup step.</strong>
+                </div>
+                <div className="onboard-info-strip-item">
+                  <span className="onboard-info-strip-label">What comes next</span>
+                  <strong>Branding, center structure, and member access will all inherit this workspace foundation.</strong>
+                </div>
+              </div>
 
               <div className="onboard-panel">
                 <div className="onboard-panel-intro">

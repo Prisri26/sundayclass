@@ -1,61 +1,12 @@
 'use client';
 
-import Image from 'next/image';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../../context/AuthContext';
 import { getSelectedPlan, saveSelectedPlan } from '../../../lib/onboarding';
 import { DEFAULT_PLAN_ID, PLAN_DEFINITIONS, PlanId } from '../../../lib/plans';
-
-function PlanSidebar() {
-  return (
-    <aside className="onboard-sidebar">
-      <div className="onboard-sidebar-content">
-        <Link href="/" className="onboard-brand">
-          <Image src="/prayloomlogo.svg" alt="PrayLoom" width={196} height={58} className="onboard-brand-logo" />
-        </Link>
-
-        <div className="onboard-progress-block">
-          <div className="onboard-progress-label">Progress</div>
-          <div className="onboard-progress-bar">
-            <span style={{ width: '20%' }} />
-          </div>
-          <div className="onboard-progress-copy">Step 1 of 5: Plan Selection</div>
-
-          <div className="onboard-checklist">
-            <div className="onboard-check-item active">
-              <div className="onboard-check-icon">1</div>
-              <span>Plan Selection</span>
-            </div>
-            <div className="onboard-check-item">
-              <div className="onboard-check-icon">2</div>
-              <span>Workspace Basics</span>
-            </div>
-            <div className="onboard-check-item">
-              <div className="onboard-check-icon">3</div>
-              <span>Identity &amp; Branding</span>
-            </div>
-            <div className="onboard-check-item">
-              <div className="onboard-check-icon">4</div>
-              <span>Center Setup</span>
-            </div>
-            <div className="onboard-check-item">
-              <div className="onboard-check-icon">5</div>
-              <span>Team Invitation</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="onboard-sidebar-footer">
-        <div className="onboard-sidebar-quote">
-          &ldquo;Choose a plan that fits the scale of your ministry today. You can always grow later.&rdquo;
-        </div>
-      </div>
-    </aside>
-  );
-}
+import OnboardingSidebar from '../../../components/onboarding/OnboardingSidebar';
 
 export default function PlanSelectionPage() {
   const router = useRouter();
@@ -113,7 +64,21 @@ export default function PlanSelectionPage() {
   return (
     <div className="onboard-shell">
       <div className="onboard-layout">
-        <PlanSidebar />
+        <OnboardingSidebar
+          progressPercent={20}
+          progressCopy="Step 1 of 5: Plan Selection"
+          quote="Choose a plan that fits the scale of your ministry today. You can always grow later."
+          contextEyebrow="PrayLoom Planning"
+          contextTitle="Begin with a plan that matches your church today."
+          contextCopy="Select the operating shape for your first workspace. You can refine billing and upgrade paths later without losing setup progress."
+          steps={[
+            { label: 'Plan Selection', status: 'active' },
+            { label: 'Workspace Basics', status: 'upcoming' },
+            { label: 'Identity & Branding', status: 'upcoming' },
+            { label: 'Center Setup', status: 'upcoming' },
+            { label: 'Team Invitation', status: 'upcoming' },
+          ]}
+        />
 
         <main className="onboard-main">
           <div className="onboard-scroll-region">
@@ -123,6 +88,17 @@ export default function PlanSelectionPage() {
               <p className="onboard-copy">
                 Start simple today. We&apos;ll save your selected plan and continue into workspace setup next.
               </p>
+
+              <div className="onboard-info-strip">
+                <div className="onboard-info-strip-item">
+                  <span className="onboard-info-strip-label">Best first move</span>
+                  <strong>Pick the plan that matches your current team, not your future maximum.</strong>
+                </div>
+                <div className="onboard-info-strip-item">
+                  <span className="onboard-info-strip-label">What stays flexible</span>
+                  <strong>Centers, members, and reporting can grow later without redoing setup.</strong>
+                </div>
+              </div>
 
               <div className="plan-selection-grid">
                 {PLAN_DEFINITIONS.map((plan) => {

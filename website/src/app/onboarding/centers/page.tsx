@@ -1,9 +1,8 @@
 'use client';
-import Image from 'next/image';
-import Link from 'next/link';
 import { Suspense, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { addOnboardingCenter } from '../../../lib/onboarding';
+import OnboardingSidebar from '../../../components/onboarding/OnboardingSidebar';
 
 const emptyForm = {
   name: '',
@@ -70,32 +69,21 @@ function CentersOnboardingContent() {
   return (
     <div className="onboard-shell">
       <div className="onboard-layout">
-        <aside className="onboard-sidebar">
-          <div className="onboard-sidebar-content">
-            <Link href="/" className="onboard-brand">
-              <Image src="/prayloomlogo.svg" alt="PrayLoom" width={196} height={58} className="onboard-brand-logo" />
-            </Link>
-            <div className="onboard-progress-block">
-              <div className="onboard-progress-label">Progress</div>
-              <div className="onboard-progress-bar">
-                <span style={{ width: '80%' }} />
-              </div>
-              <div className="onboard-progress-copy">Step 4 of 5: Center Setup</div>
-              <div className="onboard-checklist">
-                <div className="onboard-check-item"><div className="onboard-check-icon">✓</div><span>Plan Selection</span></div>
-                <div className="onboard-check-item"><div className="onboard-check-icon">✓</div><span>Workspace Basics</span></div>
-                <div className="onboard-check-item"><div className="onboard-check-icon">✓</div><span>Identity &amp; Branding</span></div>
-                <div className="onboard-check-item active"><div className="onboard-check-icon">4</div><span>Center Setup</span></div>
-                <div className="onboard-check-item"><div className="onboard-check-icon">5</div><span>Team Invitation</span></div>
-              </div>
-            </div>
-          </div>
-          <div className="onboard-sidebar-footer">
-            <div className="onboard-sidebar-quote">
-              &ldquo;For where two or three are gathered, structure still matters.&rdquo;
-            </div>
-          </div>
-        </aside>
+        <OnboardingSidebar
+          progressPercent={80}
+          progressCopy="Step 4 of 5: Center Setup"
+          quote="For where two or three are gathered, structure still matters."
+          contextEyebrow="Center Design"
+          contextTitle="Map where ministry actually happens."
+          contextCopy="Use this step to turn one church workspace into a real operating network of campuses, houses, or local centers."
+          steps={[
+            { label: 'Plan Selection', status: 'done' },
+            { label: 'Workspace Basics', status: 'done' },
+            { label: 'Identity & Branding', status: 'done' },
+            { label: 'Center Setup', status: 'active' },
+            { label: 'Team Invitation', status: 'upcoming' },
+          ]}
+        />
 
         <main className="onboard-main">
           <div className="onboard-scroll-region">
@@ -103,6 +91,17 @@ function CentersOnboardingContent() {
               <div className="onboard-step">Step 4 of 5</div>
               <h1 className="onboard-title">Create your Sunday class centers.</h1>
               <p className="onboard-copy">Add the church campus and any local centers where Sunday class is conducted.</p>
+
+              <div className="onboard-info-strip">
+                <div className="onboard-info-strip-item">
+                  <span className="onboard-info-strip-label">What this unlocks</span>
+                  <strong>Teachers, attendance, and students can all be scoped to the right local center instead of one flat list.</strong>
+                </div>
+                <div className="onboard-info-strip-item">
+                  <span className="onboard-info-strip-label">Good default</span>
+                  <strong>Start with the main church and only add more centers where class leadership actually needs separate access.</strong>
+                </div>
+              </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: 'minmax(320px, 0.92fr) minmax(360px, 1.08fr)', gap: '42px', marginTop: '38px' }}>
               <section>
