@@ -1,4 +1,4 @@
-import type { ActionCodeSettings } from 'firebase/auth';
+import { sendEmailVerification, type ActionCodeSettings, type User } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from './firebase';
 
@@ -48,12 +48,28 @@ export function mapFirebaseAuthError(error: any) {
 }
 
 export function getEmailVerificationActionSettings(origin?: string): ActionCodeSettings {
-  const baseUrl = origin || (typeof window !== 'undefined' ? window.location.origin : '');
+  const envBaseUrl = process.env.NEXT_PUBLIC_APP_URL?.trim() || '';
+  const browserOrigin = typeof window !== 'undefined' ? window.location.origin : '';
+  const baseUrl = envBaseUrl || origin || browserOrigin;
 
   return {
     url: `${baseUrl}/verify-email/action`,
     handleCodeInApp: true,
   };
+}
+
+export async function sendVerificationEmailWithFallback(user: User, origin?: string) {
+  try {
+    await sendEmailVerification(user, getEmailVerificationActionSettings(origin));
+    return { mode: 'custom' as const };
+  } catch (error: any) {
+    const code = error?.code || '';
+    if (code === 'auth/unauthorized-continue-uri' || code === 'auth/invalid-continue-uri') {
+      await sendEmailVerification(user);
+      return { mode: 'firebase_default' as const };
+    }
+    throw error;
+  }
 }
 
 export async function getUserSecurityState(userId: string) {

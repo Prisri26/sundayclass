@@ -3,12 +3,12 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
-import { sendEmailVerification, signOut } from 'firebase/auth';
+import { signOut } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../context/AuthContext';
 import { auth, db } from '../../lib/firebase';
-import { getEmailVerificationActionSettings, mapFirebaseAuthError } from '../../lib/auth';
+import { mapFirebaseAuthError, sendVerificationEmailWithFallback } from '../../lib/auth';
 
 async function getVerifiedUser() {
   const current = auth.currentUser;
@@ -99,8 +99,12 @@ export default function VerifyEmailPage() {
     setSending(true);
     setError('');
     try {
-      await sendEmailVerification(current, getEmailVerificationActionSettings(window.location.origin));
-      setMessage('Verification email sent again. Please check your inbox and spam folder.');
+      const result = await sendVerificationEmailWithFallback(current, window.location.origin);
+      setMessage(
+        result.mode === 'firebase_default'
+          ? 'Verification email sent using Firebase default flow. Please check your inbox, open the link, then return here and continue.'
+          : 'Verification email sent again. Please check your inbox and spam folder.',
+      );
     } catch (nextError: any) {
       setError(mapFirebaseAuthError(nextError));
     } finally {
