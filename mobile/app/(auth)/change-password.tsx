@@ -9,6 +9,7 @@ import {
   Platform,
   Alert,
   ActivityIndicator,
+  SafeAreaView,
 } from 'react-native';
 import { Redirect, useRouter } from 'expo-router';
 import { updatePassword } from 'firebase/auth';
@@ -80,11 +81,23 @@ export default function ChangePasswordScreen() {
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
+      <View style={styles.hero}>
+        <View style={styles.heroGlow} />
+        <View style={styles.heroGlowSecondary} />
+        <SafeAreaView>
+          <Text style={styles.heroKicker}>First-time access</Text>
+          <Text style={styles.heroTitle}>Create your private password</Text>
+          <Text style={styles.heroCopy}>
+            This account was provisioned with a temporary password. Set a private one now before entering PrayLoom.
+          </Text>
+        </SafeAreaView>
+      </View>
+
       <View style={styles.card}>
-        <Text style={styles.kicker}>Required before access</Text>
-        <Text style={styles.title}>Create your private password</Text>
+        <Text style={styles.kicker}>Security step</Text>
+        <Text style={styles.title}>Protect this member account</Text>
         <Text style={styles.copy}>
-          This account was provisioned with a temporary password. Change it once now before entering PrayLoom.
+          Strong passwords help keep church attendance, members, and student data secure.
         </Text>
 
         <View style={styles.field}>
@@ -123,14 +136,65 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.background,
-    justifyContent: 'center',
-    padding: Spacing.lg,
+  },
+  hero: {
+    backgroundColor: Colors.primaryDark,
+    paddingHorizontal: Spacing.lg,
+    paddingTop: 18,
+    paddingBottom: 38,
+    borderBottomLeftRadius: 34,
+    borderBottomRightRadius: 34,
+    overflow: 'hidden',
+  },
+  heroGlow: {
+    position: 'absolute',
+    width: 220,
+    height: 220,
+    borderRadius: 110,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    top: -70,
+    right: -40,
+  },
+  heroGlowSecondary: {
+    position: 'absolute',
+    width: 180,
+    height: 180,
+    borderRadius: 90,
+    backgroundColor: 'rgba(209,152,98,0.18)',
+    bottom: -60,
+    left: -40,
+  },
+  heroKicker: {
+    fontSize: 12,
+    fontWeight: '800',
+    letterSpacing: 1.8,
+    textTransform: 'uppercase',
+    color: 'rgba(255,255,255,0.72)',
+    marginBottom: 8,
+  },
+  heroTitle: {
+    fontSize: 31,
+    lineHeight: 36,
+    fontWeight: '800',
+    color: Colors.white,
+    maxWidth: 280,
+  },
+  heroCopy: {
+    marginTop: 10,
+    maxWidth: 308,
+    fontSize: 14,
+    lineHeight: 21,
+    color: 'rgba(255,255,255,0.84)',
   },
   card: {
+    marginTop: -18,
+    marginHorizontal: Spacing.lg,
     backgroundColor: Colors.surface,
     borderRadius: Radius.xl,
     padding: 24,
     gap: 16,
+    borderWidth: 1,
+    borderColor: Colors.border,
     ...Shadows.lg,
   },
   kicker: {

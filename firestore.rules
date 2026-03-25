@@ -69,6 +69,15 @@ service cloud.firestore {
       allow delete: if isPlatformAdmin();
     }
 
+    match /churchCodes/{churchCode} {
+      allow read: if true;
+      allow create: if isSignedIn() && request.resource.data.createdByUserId == request.auth.uid;
+      allow update, delete: if isPlatformAdmin()
+        || (isSignedIn()
+          && resource.data.churchId is string
+          && isChurchAdmin(resource.data.churchId));
+    }
+
     match /churches/{churchId} {
       allow read: if canReadChurch(churchId);
       allow create: if isSignedIn()

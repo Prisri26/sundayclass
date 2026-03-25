@@ -1,12 +1,12 @@
 export const Colors = {
-    primary: '#143C7D',
-    primaryLight: '#2F66C9',
-    primaryDark: '#0C2350',
-    primarySoft: '#DDE9FF',
+    primary: '#2A6F9E',
+    primaryLight: '#5B92BC',
+    primaryDark: '#173A5A',
+    primarySoft: '#DCEAF4',
 
-    accent: '#E59A2F',
-    accentLight: '#F5C977',
-    accentSoft: '#FFF1D9',
+    accent: '#D19862',
+    accentLight: '#E7BE94',
+    accentSoft: '#F7ECDF',
 
     success: '#159A6F',
     successSoft: '#E7F8F1',
@@ -20,17 +20,17 @@ export const Colors = {
     absent: '#D9485F',
     absentBg: '#FFE9ED',
 
-    background: '#F4F7FB',
-    backgroundMuted: '#ECF1F8',
+    background: '#F7F5F2',
+    backgroundMuted: '#EFEBE6',
     surface: '#FFFFFF',
-    surfaceAlt: '#F8FAFD',
-    border: '#D9E3F0',
-    borderStrong: '#BDD0E6',
-    text: '#142033',
-    textSecondary: '#607089',
-    textMuted: '#8A98AE',
+    surfaceAlt: '#F8F6F2',
+    border: '#D9DFE7',
+    borderStrong: '#C8D2DE',
+    text: '#181B2E',
+    textSecondary: '#626B82',
+    textMuted: '#8E96AA',
     white: '#FFFFFF',
-    overlay: 'rgba(10, 20, 36, 0.5)',
+    overlay: 'rgba(11, 17, 31, 0.52)',
 };
 
 export const Fonts = {
@@ -42,9 +42,9 @@ export const Fonts = {
 export const Radius = {
     xs: 6,
     sm: 10,
-    md: 16,
-    lg: 22,
-    xl: 30,
+    md: 18,
+    lg: 24,
+    xl: 32,
     pill: 999,
 };
 
@@ -58,24 +58,24 @@ export const Spacing = {
 
 export const Shadows = {
     sm: {
-        shadowColor: '#10213D',
+        shadowColor: '#18243A',
         shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.05,
-        shadowRadius: 10,
+        shadowOpacity: 0.06,
+        shadowRadius: 12,
         elevation: 2,
     },
     md: {
-        shadowColor: '#10213D',
-        shadowOffset: { width: 0, height: 8 },
-        shadowOpacity: 0.08,
-        shadowRadius: 18,
+        shadowColor: '#18243A',
+        shadowOffset: { width: 0, height: 10 },
+        shadowOpacity: 0.1,
+        shadowRadius: 22,
         elevation: 5,
     },
     lg: {
-        shadowColor: '#10213D',
-        shadowOffset: { width: 0, height: 14 },
+        shadowColor: '#18243A',
+        shadowOffset: { width: 0, height: 18 },
         shadowOpacity: 0.12,
-        shadowRadius: 28,
+        shadowRadius: 32,
         elevation: 8,
     },
 };

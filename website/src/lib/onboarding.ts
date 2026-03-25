@@ -1,5 +1,5 @@
 import { updateProfile, User } from 'firebase/auth';
-import { addDoc, collection, doc, getDoc, getDocs, orderBy, query, serverTimestamp, setDoc, updateDoc } from 'firebase/firestore';
+import { addDoc, collection, doc, getDoc, getDocs, orderBy, query, serverTimestamp, setDoc, updateDoc, where } from 'firebase/firestore';
 import { db } from './firebase';
 import { DEFAULT_PLAN_ID, getPlanDefinition, PlanId } from './plans';
 import { Membership } from './tenant';
@@ -50,8 +50,10 @@ export async function createChurchWorkspace(user: User, input: CreateChurchWorks
     throw new Error('Please enter a valid church name or slug.');
   }
   const selectedPlan = getPlanDefinition(input.selectedPlanId || DEFAULT_PLAN_ID);
+  const churchCode = await generateUniqueChurchCode();
 
   const churchRef = doc(db, 'churches', slug);
+  const churchCodeRef = doc(db, 'churchCodes', churchCode);
   const memberRef = doc(db, `churches/${slug}/members`, user.uid);
   const userRef = doc(db, 'users', user.uid);
   const generalSettingsRef = doc(db, `churches/${slug}/settings`, 'general');
@@ -66,6 +68,7 @@ export async function createChurchWorkspace(user: User, input: CreateChurchWorks
     await setDoc(churchRef, {
       name: input.churchName.trim(),
       slug,
+      churchCode,
       status: 'active',
       plan: selectedPlan.id,
       timezone: input.timezone,
@@ -127,6 +130,7 @@ export async function createChurchWorkspace(user: User, input: CreateChurchWorks
 
   try {
     await setDoc(generalSettingsRef, {
+      churchCode,
       timezone: input.timezone,
       locale: 'en',
       attendanceDays: ['sunday'],
@@ -183,7 +187,28 @@ export async function createChurchWorkspace(user: User, input: CreateChurchWorks
     throw new Error(`Default center failed: ${error?.message || 'permission denied'}`);
   }
 
-  return { churchId: slug };
+  try {
+    await setDoc(churchCodeRef, {
+      churchId: slug,
+      churchCode,
+      churchDisplayName: input.churchName.trim(),
+      shortName: input.churchName.trim(),
+      logoUrl: '',
+      primaryColor: '#4F46E5',
+      secondaryColor: '#3730A3',
+      accentColor: '#10B981',
+      welcomeTitle: `Welcome to ${input.churchName.trim()}`,
+      welcomeSubtitle: 'Manage centers, students, and attendance with confidence.',
+      createdByUserId: user.uid,
+      active: true,
+      updatedAt: serverTimestamp(),
+      createdAt: serverTimestamp(),
+    });
+  } catch (error: any) {
+    throw new Error(`Church code setup failed: ${error?.message || 'permission denied'}`);
+  }
+
+  return { churchId: slug, churchCode };
 }
 
 export type BrandingSetupInput = {
@@ -207,6 +232,25 @@ export async function saveBrandingSetup(churchId: string, input: BrandingSetupIn
     accentColor: input.accentColor,
     welcomeTitle: input.welcomeTitle?.trim() || `Welcome to ${input.churchDisplayName.trim()}`,
     welcomeSubtitle: input.welcomeSubtitle?.trim() || 'Manage centers, students, and attendance with confidence.',
+    updatedAt: serverTimestamp(),
+  }, { merge: true });
+
+  const churchSnapshot = await getDoc(doc(db, 'churches', churchId));
+  const churchCode = String(churchSnapshot.data()?.churchCode || '').trim();
+  if (!churchCode) return;
+
+  await setDoc(doc(db, 'churchCodes', churchCode), {
+    churchId,
+    churchCode,
+    churchDisplayName: input.churchDisplayName.trim(),
+    shortName: input.shortName?.trim() || input.churchDisplayName.trim(),
+    logoUrl: input.logoUrl || '',
+    primaryColor: input.primaryColor,
+    secondaryColor: input.secondaryColor,
+    accentColor: input.accentColor,
+    welcomeTitle: input.welcomeTitle?.trim() || `Welcome to ${input.churchDisplayName.trim()}`,
+    welcomeSubtitle: input.welcomeSubtitle?.trim() || 'Manage centers, students, and attendance with confidence.',
+    active: true,
     updatedAt: serverTimestamp(),
   }, { merge: true });
 }
@@ -311,6 +355,22 @@ async function collectUsedLoginIds(churchId: string) {
   });
 
   return used;
+}
+
+function generateChurchCodeCandidate() {
+  return String(Math.floor(100000 + Math.random() * 900000));
+}
+
+async function generateUniqueChurchCode() {
+  for (let attempt = 0; attempt < 20; attempt += 1) {
+    const candidate = generateChurchCodeCandidate();
+    const snap = await getDoc(doc(db, 'churchCodes', candidate));
+    if (!snap.exists()) {
+      return candidate;
+    }
+  }
+
+  throw new Error('Unable to allocate a unique church code right now. Please try again.');
 }
 
 export async function generateUniqueLoginId(churchId: string, fullName: string) {

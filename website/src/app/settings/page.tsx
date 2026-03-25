@@ -12,6 +12,7 @@ import { getPlanDefinition } from '../../lib/plans';
 import { ChurchSubscription, getChurchSubscription } from '../../lib/subscription';
 
 type GeneralSettings = {
+  churchCode?: string;
   timezone: string;
   locale: string;
 };
@@ -28,6 +29,7 @@ const defaultBranding = {
 };
 
 const defaultGeneral: GeneralSettings = {
+  churchCode: '',
   timezone: 'Asia/Calcutta',
   locale: 'en',
 };
@@ -66,6 +68,7 @@ export default function SettingsPage() {
       if (!snapshot.exists()) return;
       const data = snapshot.data() as Partial<GeneralSettings>;
       setGeneralForm({
+        churchCode: data.churchCode || '',
         timezone: data.timezone || defaultGeneral.timezone,
         locale: data.locale || defaultGeneral.locale,
       });
@@ -159,7 +162,7 @@ export default function SettingsPage() {
               <section className="studio-setting-grid">
                 <div>
                   <div className="studio-section-title">Church Profile</div>
-                  <div className="studio-section-copy">Foundational identification for your workspace across the network.</div>
+                  <div className="studio-section-copy">Foundational identification for your workspace across the network, including the mobile church code your team uses before login.</div>
                 </div>
                 <div className="studio-panel studio-form-card">
                   <div className="studio-field-grid">
@@ -177,6 +180,15 @@ export default function SettingsPage() {
                       <label className="studio-label">Workspace Slug</label>
                       <input className="studio-input" value={activeChurchId || ''} disabled />
                     </div>
+                    <div className="studio-field">
+                      <label className="studio-label">Church Code</label>
+                      <input className="studio-input" value={generalForm.churchCode || 'Pending'} disabled />
+                    </div>
+                  </div>
+                  <div className="studio-plan-note">
+                    Teachers enter this 6-digit code in the mobile app first. PrayLoom then loads your church name, colors, and welcome branding before sign in.
+                  </div>
+                  <div className="studio-field-grid">
                     <div className="studio-field">
                       <label className="studio-label">Logo URL</label>
                       <input className="studio-input" value={brandingForm.logoUrl} onChange={(e) => setBrandingForm((current) => ({ ...current, logoUrl: e.target.value }))} placeholder="Upload or paste your logo URL" />

@@ -333,9 +333,9 @@ export default function AttendanceScreen() {
                         <View style={styles.heroTopRow}>
                             <View style={styles.heroCopy}>
                                 <Text style={styles.heroEyebrow}>Attendance</Text>
-                                <Text style={styles.heroTitle}>Sunday Class Register</Text>
+                                <Text style={styles.heroTitle}>PrayLoom Register</Text>
                                 <Text style={styles.heroSubtitle}>
-                                    {branding?.welcomeSubtitle || 'Mark attendance, note the lesson, and celebrate every center beautifully.'}
+                                    {branding?.welcomeSubtitle || 'Mark attendance, capture the lesson, and steward every center with clarity.'}
                                 </Text>
 
                                 {(multiTenantEnabled || activeChurch || branding?.churchDisplayName) ? (
@@ -353,7 +353,7 @@ export default function AttendanceScreen() {
 
                                 <View style={styles.heroSignalRow}>
                                     <View style={styles.heroSignalCard}>
-                                        <Text style={styles.heroSignalLabel}>Sunday</Text>
+                                        <Text style={styles.heroSignalLabel}>Session</Text>
                                         <Text style={styles.heroSignalValue}>{isSunday ? 'Open' : 'Standby'}</Text>
                                     </View>
                                     <View style={[styles.heroSignalCard, styles.heroSignalCardMuted]}>
@@ -425,7 +425,7 @@ export default function AttendanceScreen() {
                             <Text style={styles.ribbonText}>
                                 {presentCount > 0
                                     ? `${presentCount} students are already marked present.`
-                                    : 'Start checking students in to build the Sunday pulse.'}
+                                    : 'Start checking students in to build today’s ministry pulse.'}
                             </Text>
                         </View>
                         <View style={[styles.ribbonStatus, { backgroundColor: isSunday ? palette.accentSoft : Colors.warningSoft }]}>
@@ -556,8 +556,8 @@ const styles = StyleSheet.create({
         right: 0,
         zIndex: 3,
         paddingHorizontal: Spacing.lg,
-        borderBottomLeftRadius: 30,
-        borderBottomRightRadius: 30,
+        borderBottomLeftRadius: 26,
+        borderBottomRightRadius: 26,
         overflow: 'hidden',
     },
     heroSafeArea: {
@@ -647,16 +647,17 @@ const styles = StyleSheet.create({
     },
     heroTitle: {
         color: Colors.white,
-        fontSize: 26,
+        fontSize: 28,
         fontWeight: '800',
-        letterSpacing: -0.7,
+        letterSpacing: -1,
+        lineHeight: 33,
     },
     heroSubtitle: {
         color: 'rgba(255,255,255,0.86)',
-        fontSize: 12.5,
-        lineHeight: 18,
+        fontSize: 13,
+        lineHeight: 19,
         marginTop: 6,
-        maxWidth: 268,
+        maxWidth: 286,
     },
     churchPill: {
         marginTop: 12,
@@ -727,7 +728,7 @@ const styles = StyleSheet.create({
     },
     dateCard: {
         backgroundColor: Colors.white,
-        borderRadius: 28,
+        borderRadius: 24,
         paddingHorizontal: 18,
         paddingVertical: 18,
         flexDirection: 'row',
@@ -782,7 +783,7 @@ const styles = StyleSheet.create({
     ribbonCard: {
         flex: 1,
         backgroundColor: Colors.surface,
-        borderRadius: 22,
+        borderRadius: 24,
         paddingHorizontal: 16,
         paddingVertical: 14,
         borderWidth: 1,

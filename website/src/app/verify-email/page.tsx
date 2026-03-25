@@ -2,7 +2,7 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { sendEmailVerification, signOut } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
@@ -25,6 +25,7 @@ export default function VerifyEmailPage() {
   const [checking, setChecking] = useState(false);
   const [message, setMessage] = useState('Check your inbox, click the verification link, then return here to continue into your PrayLoom workspace setup.');
   const [error, setError] = useState('');
+  const redirectingRef = useRef(false);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -36,6 +37,25 @@ export default function VerifyEmailPage() {
     if (!loading && user && isEmailVerified) {
       void continueAfterVerification();
     }
+  }, [isEmailVerified, loading, user]);
+
+  useEffect(() => {
+    if (loading || !user || isEmailVerified) return;
+
+    const interval = window.setInterval(async () => {
+      if (!auth.currentUser || redirectingRef.current) return;
+      try {
+        const refreshedUser = await getVerifiedUser();
+        if (refreshedUser?.emailVerified) {
+          setMessage('Email verified successfully. Redirecting you into setup...');
+          await continueAfterVerification(refreshedUser.uid);
+        }
+      } catch {
+        // Keep the screen calm. The manual button still works.
+      }
+    }, 3000);
+
+    return () => window.clearInterval(interval);
   }, [isEmailVerified, loading, user]);
 
   useEffect(() => {
@@ -59,12 +79,17 @@ export default function VerifyEmailPage() {
   const continueAfterVerification = async (userIdOverride?: string) => {
     const resolvedUserId = userIdOverride || auth.currentUser?.uid || user?.uid;
     if (!resolvedUserId) return;
+    if (redirectingRef.current) return;
+    redirectingRef.current = true;
     try {
       const userDoc = await getDoc(doc(db, 'users', resolvedUserId));
       const data = userDoc.exists() ? userDoc.data() as { defaultChurchId?: string } : null;
-      router.replace(data?.defaultChurchId ? '/dashboard' : '/onboarding/plan');
+      const nextPath = data?.defaultChurchId ? '/dashboard' : '/onboarding/plan';
+      router.replace(nextPath);
+      window.location.assign(nextPath);
     } catch {
       router.replace('/onboarding/plan');
+      window.location.assign('/onboarding/plan');
     }
   };
 

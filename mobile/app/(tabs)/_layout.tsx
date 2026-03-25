@@ -93,7 +93,7 @@ export default function TabsLayout() {
             <Tabs.Screen
                 name="add-student"
                 options={{
-                    tabBarIcon: ({ focused }) => <TabIcon focused={focused} icon="user-plus" label="Students" activeColor={palette.primary} inactiveColor={Colors.textSecondary} />,
+                    tabBarIcon: ({ focused }) => <TabIcon focused={focused} icon="user-plus" label="Add Student" activeColor={palette.primary} inactiveColor={Colors.textSecondary} />,
                 }}
             />
         </Tabs>
@@ -148,22 +148,22 @@ const styles = StyleSheet.create({
         paddingTop: 10,
         borderTopWidth: 0,
         borderWidth: 1,
-        borderRadius: 30,
+        borderRadius: 26,
         overflow: 'hidden',
         ...Shadows.lg,
     },
     tabBarBackground: {
         flex: 1,
-        backgroundColor: 'rgba(255,255,255,0.96)',
+        backgroundColor: 'rgba(255,255,255,0.97)',
     },
     tabBarGlow: {
         position: 'absolute',
-        width: 180,
-        height: 80,
-        borderRadius: 40,
-        top: -18,
-        left: 16,
-        opacity: 0.7,
+        width: 150,
+        height: 68,
+        borderRadius: 34,
+        top: -12,
+        left: 18,
+        opacity: 0.62,
     },
     tabBarItem: {
         justifyContent: 'center',
@@ -177,9 +177,9 @@ const styles = StyleSheet.create({
         marginTop: Platform.OS === 'ios' ? 2 : 0,
     },
     iconShell: {
-        width: 38,
-        height: 38,
-        borderRadius: 14,
+        width: 40,
+        height: 40,
+        borderRadius: 16,
         alignItems: 'center',
         justifyContent: 'center',
         backgroundColor: Colors.surfaceAlt,

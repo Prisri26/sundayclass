@@ -17,10 +17,10 @@ import { auth } from '../../lib/firebase';
 import { Colors, Radius, Shadows, Spacing } from '../../constants/theme';
 import { StatusBar } from 'expo-status-bar';
 import { Feather } from '@expo/vector-icons';
-import { useChurchBranding } from '../../hooks/useChurchBranding';
 import { getBrandPalette } from '../../lib/branding';
-import { getBootstrapChurchId } from '../../lib/platform';
 import { mapFirebaseAuthError, normalizeAuthIdentifier } from '../../lib/auth';
+import { Redirect, useRouter } from 'expo-router';
+import { useChurchSelection } from '../../context/ChurchSelectionContext';
 
 function InputField({
     label,
@@ -61,11 +61,24 @@ function InputField({
 }
 
 export default function LoginScreen() {
-    const { branding } = useChurchBranding(getBootstrapChurchId());
-    const palette = getBrandPalette(branding);
+    const router = useRouter();
+    const { selectedChurch, clearSelection } = useChurchSelection();
+    const palette = getBrandPalette(
+        selectedChurch
+            ? {
+                  primaryColor: selectedChurch.primaryColor,
+                  secondaryColor: selectedChurch.secondaryColor,
+                  accentColor: selectedChurch.accentColor,
+              }
+            : null,
+    );
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(false);
+
+    if (!selectedChurch) {
+        return <Redirect href="/(auth)/church-code" />;
+    }
 
     const handleLogin = async () => {
         if (!email.trim() || !password.trim()) {
@@ -82,6 +95,11 @@ export default function LoginScreen() {
         }
     };
 
+    const handleChangeChurch = async () => {
+        await clearSelection();
+        router.replace('/(auth)/church-code');
+    };
+
     return (
         <KeyboardAvoidingView
             style={styles.container}
@@ -96,30 +114,30 @@ export default function LoginScreen() {
                     <View style={styles.logoWrap}>
                         <View style={styles.brandTopRow}>
                             <View style={styles.logoBadge}>
-                                {branding?.logoUrl ? (
-                                    <Image source={{ uri: branding.logoUrl }} style={styles.brandLogo} />
+                                {selectedChurch.logoUrl ? (
+                                    <Image source={{ uri: selectedChurch.logoUrl }} style={styles.brandLogo} />
                                 ) : (
                                     <Feather name="book-open" size={32} color={Colors.white} />
                                 )}
                             </View>
-                            <View style={styles.brandStatusPill}>
-                                <View style={[styles.brandStatusDot, { backgroundColor: palette.accent }]} />
-                                <Text style={styles.brandStatusText}>White-label ready</Text>
-                            </View>
+                            <TouchableOpacity style={styles.brandStatusPill} onPress={handleChangeChurch} activeOpacity={0.85}>
+                                <Feather name="refresh-cw" size={14} color={Colors.white} />
+                                <Text style={styles.brandStatusText}>Change church</Text>
+                            </TouchableOpacity>
                         </View>
-                        <View style={styles.logoTextWrap}>
-                            <Text style={styles.eyebrow}>{branding?.shortName || 'PrayLoom'}</Text>
-                            <Text style={styles.title}>{branding?.welcomeTitle || 'Welcome back'}</Text>
-                            <Text style={styles.subtitle}>Track attendance with a calm, simple teacher workflow.</Text>
+                    <View style={styles.logoTextWrap}>
+                            <Text style={styles.eyebrow}>{selectedChurch.shortName || 'PrayLoom Mobile'}</Text>
+                            <Text style={styles.title}>{selectedChurch.welcomeTitle || `Welcome to ${selectedChurch.churchDisplayName}`}</Text>
+                            <Text style={styles.subtitle}>{selectedChurch.welcomeSubtitle || 'A calmer ministry flow for teachers, attendance, and student care.'}</Text>
                         </View>
                         <View style={styles.heroFeatureRow}>
                             <View style={styles.heroFeatureCard}>
-                                <Text style={styles.heroFeatureLabel}>Church</Text>
-                                <Text style={styles.heroFeatureValue}>{branding?.churchDisplayName || 'PrayLoom Workspace'}</Text>
+                                <Text style={styles.heroFeatureLabel}>Workspace</Text>
+                                <Text style={styles.heroFeatureValue}>{selectedChurch.churchDisplayName || 'PrayLoom Workspace'}</Text>
                             </View>
                             <View style={styles.heroFeatureCard}>
-                                <Text style={styles.heroFeatureLabel}>Experience</Text>
-                                <Text style={styles.heroFeatureValue}>Branded mobile</Text>
+                                <Text style={styles.heroFeatureLabel}>Church Code</Text>
+                                <Text style={styles.heroFeatureValue}>{selectedChurch.churchCode}</Text>
                             </View>
                         </View>
                     </View>
@@ -127,16 +145,16 @@ export default function LoginScreen() {
 
                 <View style={[styles.card, Shadows.lg]}>
                     <View style={styles.cardHeader}>
-                        <Text style={styles.cardTitle}>Teacher Sign In</Text>
-                        <Text style={styles.cardSubtitle}>Use your church account to continue.</Text>
+                        <Text style={styles.cardTitle}>Sign in to your church workspace</Text>
+                        <Text style={styles.cardSubtitle}>Use your PrayLoom login ID and password to continue.</Text>
                     </View>
 
                     <InputField
-                        label="Email Address"
+                        label="Login ID"
                         icon="mail"
                         value={email}
                         onChangeText={setEmail}
-                        placeholder="teacher@church.com"
+                        placeholder="teacher@hosanna.prayloom"
                         keyboardType="email-address"
                     />
 
@@ -151,7 +169,7 @@ export default function LoginScreen() {
 
                     <View style={styles.noteRow}>
                         <Feather name="shield" size={15} color={palette.primary} />
-                        <Text style={styles.noteText}>Secure access for teachers and volunteers</Text>
+                        <Text style={styles.noteText}>Secure access for teachers, volunteers, and ministry teams</Text>
                     </View>
 
                     <TouchableOpacity
@@ -172,7 +190,7 @@ export default function LoginScreen() {
                 </View>
 
                 <View style={styles.footer}>
-                    <Text style={styles.footerText}>Built on PrayLoom for {branding?.churchDisplayName || 'churches'}, teachers, and ministry leaders.</Text>
+                    <Text style={styles.footerText}>Built on PrayLoom for {selectedChurch.churchDisplayName || 'churches'}, teachers, and ministry leaders.</Text>
                 </View>
             </ScrollView>
         </KeyboardAvoidingView>
@@ -186,9 +204,9 @@ const styles = StyleSheet.create({
         backgroundColor: Colors.primaryDark,
         paddingHorizontal: Spacing.lg,
         paddingTop: 80,
-        paddingBottom: 78,
-        borderBottomLeftRadius: 42,
-        borderBottomRightRadius: 42,
+        paddingBottom: 86,
+        borderBottomLeftRadius: 38,
+        borderBottomRightRadius: 38,
         overflow: 'hidden',
     },
     heroOrbLarge: {
@@ -268,15 +286,16 @@ const styles = StyleSheet.create({
     },
     title: {
         color: Colors.white,
-        fontSize: 34,
+        fontSize: 35,
         fontWeight: '800',
-        letterSpacing: -0.8,
+        letterSpacing: -1.1,
+        lineHeight: 40,
     },
     subtitle: {
         color: 'rgba(255,255,255,0.86)',
-        fontSize: 15,
-        lineHeight: 22,
-        maxWidth: 290,
+        fontSize: 14,
+        lineHeight: 21,
+        maxWidth: 300,
     },
     heroFeatureRow: {
         flexDirection: 'row',
@@ -285,10 +304,12 @@ const styles = StyleSheet.create({
     },
     heroFeatureCard: {
         flex: 1,
-        backgroundColor: 'rgba(255,255,255,0.12)',
+        backgroundColor: 'rgba(255,255,255,0.1)',
         borderRadius: Radius.lg,
         paddingHorizontal: 14,
         paddingVertical: 12,
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.08)',
     },
     heroFeatureLabel: {
         color: 'rgba(255,255,255,0.68)',
@@ -304,19 +325,20 @@ const styles = StyleSheet.create({
         marginTop: 6,
     },
     card: {
-        marginTop: -44,
+        marginTop: -38,
         marginHorizontal: Spacing.lg,
         backgroundColor: Colors.surface,
         borderRadius: Radius.xl,
-        padding: Spacing.lg,
+        padding: 20,
         borderWidth: 1,
         borderColor: Colors.border,
     },
     cardHeader: { marginBottom: Spacing.lg, gap: 4 },
     cardTitle: {
-        fontSize: 24,
+        fontSize: 26,
         fontWeight: '800',
         color: Colors.text,
+        lineHeight: 31,
     },
     cardSubtitle: {
         fontSize: 14,
@@ -340,6 +362,7 @@ const styles = StyleSheet.create({
         borderColor: Colors.border,
         borderRadius: Radius.md,
         paddingHorizontal: 14,
+        minHeight: 58,
     },
     inputIcon: { marginRight: 10 },
     input: {
@@ -352,7 +375,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         gap: 8,
-        backgroundColor: Colors.primarySoft,
+        backgroundColor: Colors.backgroundMuted,
         paddingHorizontal: 12,
         paddingVertical: 10,
         borderRadius: Radius.md,
@@ -361,11 +384,11 @@ const styles = StyleSheet.create({
     noteText: {
         color: Colors.primaryDark,
         fontSize: 13,
-        fontWeight: '600',
+        fontWeight: '700',
     },
     button: {
         minHeight: 58,
-        borderRadius: Radius.md,
+        borderRadius: Radius.lg,
         backgroundColor: Colors.primary,
         alignItems: 'center',
         justifyContent: 'center',

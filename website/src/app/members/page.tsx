@@ -32,6 +32,7 @@ export default function MembersPage() {
   const [subscription, setSubscription] = useState<ChurchSubscription | null>(null);
   const [createdCredentials, setCreatedCredentials] = useState<ProvisioningMemberRecord[]>([]);
   const [provisioningStatus, setProvisioningStatus] = useState('');
+  const [passwordResetStatus, setPasswordResetStatus] = useState('');
 
   useEffect(() => {
     if (!loading && !user) router.replace('/login');
@@ -98,6 +99,7 @@ export default function MembersPage() {
     setSaving(true);
     setError('');
     setProvisioningStatus('');
+    setPasswordResetStatus('');
     try {
       const created = await saveProvisioningMembers(activeChurchId, [
         {
@@ -134,6 +136,7 @@ export default function MembersPage() {
     setSaving(true);
     setError('');
     setProvisioningStatus('');
+    setPasswordResetStatus('');
 
     try {
       const idToken = await user.getIdToken();
@@ -160,6 +163,41 @@ export default function MembersPage() {
       );
     } catch (err: any) {
       setError(err?.message || 'Failed to create member accounts.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleResetTemporaryPassword = async (memberUserId: string) => {
+    if (!activeChurchId || !user) {
+      setError('No active church selected.');
+      return;
+    }
+
+    setSaving(true);
+    setError('');
+    setProvisioningStatus('');
+    setPasswordResetStatus('');
+
+    try {
+      const idToken = await user.getIdToken();
+      const response = await fetch('/api/reset-member-password', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${idToken}`,
+        },
+        body: JSON.stringify({ churchId: activeChurchId, memberUserId }),
+      });
+
+      const payload = await response.json();
+      if (!response.ok) {
+        throw new Error(payload?.error || 'Password reset failed.');
+      }
+
+      setPasswordResetStatus(`New temporary password for ${payload.loginId}: ${payload.temporaryPassword}`);
+    } catch (err: any) {
+      setError(err?.message || 'Failed to reset temporary password.');
     } finally {
       setSaving(false);
     }
@@ -265,6 +303,12 @@ export default function MembersPage() {
                 {provisioningStatus && (
                   <div style={{ background: '#E8F4EC', color: '#17603A', padding: '10px 14px', borderRadius: 8, fontSize: 13 }}>
                     {provisioningStatus}
+                  </div>
+                )}
+
+                {passwordResetStatus && (
+                  <div style={{ background: '#EEF2FF', color: '#312E81', padding: '10px 14px', borderRadius: 8, fontSize: 13 }}>
+                    {passwordResetStatus}
                   </div>
                 )}
 
@@ -406,6 +450,9 @@ export default function MembersPage() {
                       </div>
                       <div className="studio-inline-actions">
                         <button className="studio-link-button" type="button">View Profile</button>
+                        <button className="studio-soft-button" type="button" onClick={() => handleResetTemporaryPassword(member.id)} disabled={saving}>
+                          Reset Temp Password
+                        </button>
                         <button className="studio-soft-button" type="button">Edit Access</button>
                       </div>
                     </div>

@@ -200,9 +200,9 @@ export default function AddStudentScreen() {
                 <View style={[styles.heroGlowSecondary, { backgroundColor: palette.primarySoft }]} />
                 <SafeAreaView>
                     <Text style={styles.heroEyebrow}>Registration</Text>
-                    <Text style={styles.heroTitle}>Add a student</Text>
+                    <Text style={styles.heroTitle}>Add a student to PrayLoom</Text>
                     <Text style={styles.heroSubtitle}>
-                        {branding?.welcomeSubtitle || 'Capture the basics once so attendance stays fast every Sunday.'}
+                        {branding?.welcomeSubtitle || 'Capture the essentials once so attendance stays calm and fast every Sunday.'}
                     </Text>
                     {(multiTenantEnabled || activeChurch || branding?.churchDisplayName) && (
                         <View style={styles.churchPill}>
@@ -240,9 +240,9 @@ export default function AddStudentScreen() {
                     <View style={[styles.introPanel, Shadows.md]}>
                         <View style={styles.introCopy}>
                             <Text style={styles.introEyebrow}>Quick Setup</Text>
-                            <Text style={styles.introTitle}>Build a clean center roster.</Text>
+                            <Text style={styles.introTitle}>Build a clear center roster.</Text>
                             <Text style={styles.introText}>
-                                Keep center assignment and grade information separate so the app stays clearer as your church grows.
+                                Keep center assignment and family details tidy so the register stays beautiful as your church grows.
                             </Text>
                         </View>
                         <View style={[styles.introBadge, { backgroundColor: palette.primarySoft }]}>
@@ -463,8 +463,8 @@ const styles = StyleSheet.create({
         paddingHorizontal: Spacing.lg,
         paddingTop: 14,
         paddingBottom: 28,
-        borderBottomLeftRadius: 36,
-        borderBottomRightRadius: 36,
+        borderBottomLeftRadius: 30,
+        borderBottomRightRadius: 30,
         overflow: 'hidden',
     },
     heroGlow: {
@@ -495,16 +495,17 @@ const styles = StyleSheet.create({
     },
     heroTitle: {
         color: Colors.white,
-        fontSize: 30,
+        fontSize: 31,
         fontWeight: '800',
-        letterSpacing: -0.6,
+        letterSpacing: -0.9,
+        lineHeight: 36,
     },
     heroSubtitle: {
         color: 'rgba(255,255,255,0.85)',
         marginTop: 8,
         fontSize: 14,
         lineHeight: 20,
-        maxWidth: 290,
+        maxWidth: 304,
     },
     churchPill: {
         marginTop: 14,
@@ -556,7 +557,7 @@ const styles = StyleSheet.create({
         marginTop: -18,
         marginBottom: Spacing.md,
         backgroundColor: Colors.surface,
-        borderRadius: Radius.xl,
+        borderRadius: 28,
         padding: Spacing.lg,
         borderWidth: 1,
         borderColor: Colors.border,
@@ -597,7 +598,7 @@ const styles = StyleSheet.create({
     },
     photoCard: {
         backgroundColor: Colors.surface,
-        borderRadius: Radius.xl,
+        borderRadius: 28,
         alignItems: 'center',
         padding: Spacing.lg,
         borderWidth: 1,
@@ -677,7 +678,7 @@ const styles = StyleSheet.create({
     },
     card: {
         backgroundColor: Colors.surface,
-        borderRadius: Radius.xl,
+        borderRadius: 28,
         padding: Spacing.lg,
         borderWidth: 1,
         borderColor: Colors.border,
