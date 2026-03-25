@@ -89,14 +89,33 @@ export default function PlanSelectionPage() {
                 Start simple today. We&apos;ll save your selected plan and continue into workspace setup next.
               </p>
 
-              <div className="onboard-info-strip">
-                <div className="onboard-info-strip-item">
-                  <span className="onboard-info-strip-label">Best first move</span>
-                  <strong>Pick the plan that matches your current team, not your future maximum.</strong>
+              <div className="onboard-plan-stage">
+                <div className="onboard-plan-intro-card">
+                  <div className="onboard-plan-intro-title">Start with the shape that fits your ministry today.</div>
+                  <div className="onboard-plan-intro-copy">
+                    Plans stay flexible. You can refine billing, centers, and team scale later without rebuilding your setup.
+                  </div>
                 </div>
-                <div className="onboard-info-strip-item">
-                  <span className="onboard-info-strip-label">What stays flexible</span>
-                  <strong>Centers, members, and reporting can grow later without redoing setup.</strong>
+
+                <div className="onboard-plan-stage-preview">
+                  <div className="onboard-plan-stage-preview-shell">
+                    <div className="onboard-plan-stage-badge">Workspace Preview</div>
+                    <div className="onboard-plan-stage-headline">A calm foundation for centers, members, and Sunday attendance.</div>
+                    <div className="onboard-plan-stage-copy">
+                      Choose the operational shape first. The church identity, branding, and team access layers come next.
+                    </div>
+
+                    <div className="onboard-plan-stage-metrics">
+                      <div className="onboard-plan-stage-metric">
+                        <span>Setup</span>
+                        <strong>5 guided steps</strong>
+                      </div>
+                      <div className="onboard-plan-stage-metric">
+                        <span>Mobile</span>
+                        <strong>Church code first</strong>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
 
@@ -113,13 +132,17 @@ export default function PlanSelectionPage() {
                       className={`plan-card tone-${plan.accent}${isSelected ? ' selected' : ''}`}
                       onClick={() => setSelectedPlanId(plan.id)}
                     >
+                      <div className="plan-card-selection-indicator" aria-hidden={!isSelected}>
+                        {isSelected ? '✓' : null}
+                      </div>
+
                       <div className="plan-card-head">
                         <div>
                           <div className="plan-card-name">{plan.name}</div>
                           <div className="plan-card-price">{plan.priceLabel}</div>
                         </div>
-                        {isSelected ? <span className="plan-card-pill">Selected</span> : null}
                       </div>
+                      {isSelected ? <span className="plan-card-pill">Selected</span> : null}
                       <div className="plan-card-subtitle">{plan.subtitle}</div>
                       <div className="plan-card-description">{plan.description}</div>
 
@@ -143,7 +166,7 @@ export default function PlanSelectionPage() {
 
               <div className="plan-note-card">
                 <div className="plan-note-copy">
-                  For now, every new workspace starts in a simple trial/manual activation state. We can add real billing and payment flows after the product foundation is stable.
+                  Every new workspace currently starts in a simple trial/manual activation state while PrayLoom subscription handling continues to mature.
                 </div>
               </div>
 
@@ -161,6 +184,7 @@ export default function PlanSelectionPage() {
                 Back
               </Link>
               <div className="onboard-footer-group">
+                <div className="onboard-footer-note">Plan first, workspace next.</div>
                 <button type="button" className="onboard-primary-btn" onClick={handleContinue} disabled={saving}>
                   {saving ? 'Saving...' : 'Continue to Workspace Setup'}
                 </button>

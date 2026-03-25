@@ -103,90 +103,103 @@ function CentersOnboardingContent() {
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: 'minmax(320px, 0.92fr) minmax(360px, 1.08fr)', gap: '42px', marginTop: '38px' }}>
-              <section>
-                <div className="onboard-panel" style={{ marginTop: 0, background: '#f2f3ff' }}>
-                  <div className="onboard-panel-intro">
-                    <div className="onboard-panel-intro-title">Center structure</div>
-                    <div className="onboard-panel-intro-copy">
-                      Add the church campus and any local teaching centers now. You can refine hosts, addresses, and attendance ownership later in the full workspace.
-                    </div>
-                  </div>
-                  <div className="onboard-grid-2">
-                    <div className="onboard-field">
-                      <label className="onboard-label">Center Name</label>
-                      <input className="onboard-input" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Center 1" />
-                    </div>
-                    <div className="onboard-field">
-                      <label className="onboard-label">Center Code</label>
-                      <input className="onboard-input" value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value })} placeholder="CTR-01" />
-                    </div>
-                    <div className="onboard-field">
-                      <label className="onboard-label">Host Name</label>
-                      <input className="onboard-input" value={form.hostName} onChange={(e) => setForm({ ...form, hostName: e.target.value })} placeholder="John Doe" />
-                    </div>
-                    <div className="onboard-field">
-                      <label className="onboard-label">Host Phone</label>
-                      <input className="onboard-input" value={form.hostPhone} onChange={(e) => setForm({ ...form, hostPhone: e.target.value })} placeholder="+1 (555) 000-0000" />
-                    </div>
-                    <div className="onboard-field full">
-                      <label className="onboard-label">Area</label>
-                      <input className="onboard-input" value={form.areaName} onChange={(e) => setForm({ ...form, areaName: e.target.value })} placeholder="Downtown Parish District" />
-                    </div>
-                    <div className="onboard-field full">
-                      <label className="onboard-label">Address</label>
-                      <textarea className="onboard-textarea" rows={2} value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} placeholder="123 Faith Lane, Grace City" />
+              <div className="onboard-centers-layout">
+                <section className="onboard-centers-form">
+                  <div className="onboard-workspace-section">
+                    <div className="onboard-workspace-section-title">Center Details</div>
+                    <div className="onboard-workspace-grid">
+                      <div className="onboard-field">
+                        <label className="onboard-label">Center Name</label>
+                        <input className="onboard-input" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Center 1" />
+                      </div>
+                      <div className="onboard-field">
+                        <label className="onboard-label">Center Code</label>
+                        <input className="onboard-input onboard-input-mono" value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value })} placeholder="CTR-01" />
+                      </div>
                     </div>
                   </div>
 
-                  <button type="button" className="onboard-primary-btn" style={{ width: '100%', marginTop: '22px' }} onClick={addDraftCenter}>
+                  <div className="onboard-workspace-section">
+                    <div className="onboard-workspace-section-title">Center Host / Leader</div>
+                    <div className="onboard-workspace-grid">
+                      <div className="onboard-field">
+                        <label className="onboard-label">Host Name</label>
+                        <input className="onboard-input" value={form.hostName} onChange={(e) => setForm({ ...form, hostName: e.target.value })} placeholder="John Doe" />
+                      </div>
+                      <div className="onboard-field">
+                        <label className="onboard-label">Host Phone</label>
+                        <input className="onboard-input" value={form.hostPhone} onChange={(e) => setForm({ ...form, hostPhone: e.target.value })} placeholder="+1 (555) 000-0000" />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="onboard-workspace-section">
+                    <div className="onboard-workspace-section-title">Location</div>
+                    <div className="onboard-workspace-grid">
+                      <div className="onboard-field full">
+                        <label className="onboard-label">Area</label>
+                        <input className="onboard-input" value={form.areaName} onChange={(e) => setForm({ ...form, areaName: e.target.value })} placeholder="Downtown Parish District" />
+                      </div>
+                      <div className="onboard-field full">
+                        <label className="onboard-label">Address</label>
+                        <textarea className="onboard-textarea" rows={3} value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} placeholder="123 Faith Lane, Grace City" />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="onboard-workspace-tip">
+                    <strong>Recommended:</strong> add only the locations where you need separate hosts, attendance ownership, or teacher access. You can expand later without restructuring your workspace.
+                  </div>
+
+                  <button type="button" className="onboard-primary-btn" style={{ width: '100%' }} onClick={addDraftCenter}>
                     Add Center
                   </button>
-                </div>
-              </section>
 
-              <section>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px' }}>
-                  <h3 className="font-editorial" style={{ fontSize: '40px', fontStyle: 'italic', color: '#131b2e' }}>Added Centers</h3>
-                  <span className="onboard-chip">{centers.length} Center{centers.length === 1 ? '' : 's'} Created</span>
-                </div>
-
-                <div className="onboard-center-list">
-                  {centers.map((center) => (
-                    <div key={center.id} className="onboard-center-card">
-                      <div>
-                        <div className="onboard-chip" style={{ marginBottom: '12px' }}>{center.code}</div>
-                        <div className="onboard-center-title">{center.name}</div>
-                        <div className="onboard-center-meta">
-                          {center.hostName ? <div>Host: {center.hostName}</div> : null}
-                          {center.areaName ? <div>Area: {center.areaName}</div> : null}
-                          {center.address ? <div>{center.address}</div> : null}
-                        </div>
-                      </div>
-                      <button type="button" className="onboard-ghost-btn" onClick={() => removeDraftCenter(center.id)}>
-                        Remove
-                      </button>
-                    </div>
-                  ))}
-
-                  {!centers.length ? (
-                    <div className="onboard-center-card" style={{ border: '2px dashed rgba(199,196,216,0.35)', background: '#f2f3ff', justifyContent: 'center', textAlign: 'center' }}>
-                      <div>
-                        <div className="font-editorial" style={{ fontSize: '28px', fontStyle: 'italic', color: '#777587' }}>Add another local center</div>
-                        <div className="onboard-helper-copy" style={{ marginTop: '8px' }}>Manage distributed Sunday classes in one place.</div>
-                      </div>
+                  {error ? (
+                    <div className="onboard-error-banner">
+                      {error}
                     </div>
                   ) : null}
-                </div>
+                </section>
 
-                {error ? (
-                  <div style={{ background: '#ffdad6', color: '#93000a', padding: '12px 14px', borderRadius: '12px', fontSize: '13px', marginTop: '18px' }}>
-                    {error}
+                <aside className="onboard-centers-preview">
+                  <div className="onboard-preview-panel">
+                    <div className="onboard-preview-eyebrow">Center Network</div>
+                    <div className="onboard-preview-title">Added Centers</div>
+                    <div className="onboard-preview-copy">
+                      The church workspace will use these local centers for team assignment, attendance, and student stewardship.
+                    </div>
+
+                    <div className="onboard-center-list">
+                      {centers.map((center) => (
+                        <div key={center.id} className="onboard-center-card">
+                          <div className="onboard-center-card-main">
+                            <div className="onboard-chip">{center.code}</div>
+                            <div className="onboard-center-title">{center.name}</div>
+                            <div className="onboard-center-meta">
+                              {center.hostName ? <div>Host: {center.hostName}</div> : null}
+                              {center.areaName ? <div>Area: {center.areaName}</div> : null}
+                              {center.address ? <div>{center.address}</div> : null}
+                            </div>
+                          </div>
+                          <button type="button" className="onboard-ghost-btn" onClick={() => removeDraftCenter(center.id)}>
+                            Remove
+                          </button>
+                        </div>
+                      ))}
+
+                      {!centers.length ? (
+                        <div className="onboard-center-empty">
+                          <div className="onboard-preview-mini-badge">Starting point</div>
+                          <div className="onboard-center-empty-title">Add your first center</div>
+                          <div className="onboard-helper-copy">Begin with the main church campus, then add satellite or neighborhood centers as needed.</div>
+                        </div>
+                      ) : null}
+                    </div>
                   </div>
-                ) : null}
-              </section>
+                </aside>
+              </div>
             </div>
-          </div>
           </div>
 
           <div className="onboard-footer-bar">

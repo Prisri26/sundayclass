@@ -5,6 +5,10 @@ import { doc, onSnapshot } from 'firebase/firestore';
 import { auth } from '../lib/firebase';
 import { db } from '../lib/firebase';
 
+const BYPASS_EMAIL_VERIFICATION =
+    process.env.NODE_ENV !== 'production' &&
+    process.env.NEXT_PUBLIC_BYPASS_EMAIL_VERIFICATION === 'true';
+
 export type AuthStatus =
     | 'loading'
     | 'signed_out'
@@ -64,7 +68,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }, []);
 
     const isAuthenticated = !!user;
-    const isEmailVerified = !!user?.emailVerified;
+    const isEmailVerified = !!user?.emailVerified || (!!user && BYPASS_EMAIL_VERIFICATION);
     const authStatus: AuthStatus = loading
         ? 'loading'
         : !user

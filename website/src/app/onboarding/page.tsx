@@ -126,56 +126,47 @@ export default function OnboardingPage() {
                 This becomes the main branded workspace for your church on PrayLoom.
               </p>
 
-              <div className="onboard-info-strip">
-                <div className="onboard-info-strip-item">
-                  <span className="onboard-info-strip-label">What this creates</span>
-                  <strong>Your root church profile, workspace slug, and the first shared identity for every later setup step.</strong>
-                </div>
-                <div className="onboard-info-strip-item">
-                  <span className="onboard-info-strip-label">What comes next</span>
-                  <strong>Branding, center structure, and member access will all inherit this workspace foundation.</strong>
-                </div>
-              </div>
-
-              <div className="onboard-panel">
-                <div className="onboard-panel-intro">
-                  <div className="onboard-panel-intro-title">Church identity basics</div>
-                  <div className="onboard-panel-intro-copy">
-                    This first workspace becomes the foundation for branding, centers, members, and attendance inside PrayLoom.
-                  </div>
-                </div>
-                <form onSubmit={handleSubmit}>
-                  <div className="onboard-grid-2">
-                    <div className="onboard-field full">
+              <form onSubmit={handleSubmit} className="onboard-workspace-form">
+                <section className="onboard-workspace-section">
+                  <h3 className="onboard-workspace-section-title">Church Information</h3>
+                  <div className="onboard-workspace-grid">
+                    <div className="onboard-field">
                       <label className="onboard-label">Church Name</label>
                       <input
                         className="onboard-input"
                         value={churchName}
                         onChange={(e) => handleChurchNameChange(e.target.value)}
-                        placeholder="Grace Cathedral"
+                        placeholder="Grace Community Church"
                         required
                       />
-                    </div>
-
-                    <div className="onboard-field full">
-                      <label className="onboard-label">Church ID / Slug</label>
-                      <input
-                        className="onboard-input"
-                        value={slug}
-                        onChange={(e) => setSlug(normalizeChurchSlug(e.target.value))}
-                        placeholder="grace-cathedral"
-                        required
-                      />
-                      <div className="onboard-hint">This unique identifier will be used in your workspace URL.</div>
                     </div>
 
                     <div className="onboard-field">
+                      <label className="onboard-label">Church ID / Slug</label>
+                      <div className="onboard-input-with-suffix">
+                        <input
+                          className="onboard-input"
+                          value={slug}
+                          onChange={(e) => setSlug(normalizeChurchSlug(e.target.value))}
+                          placeholder="grace-community"
+                          required
+                        />
+                        <span className="onboard-input-suffix">.prayloom</span>
+                      </div>
+                    </div>
+                  </div>
+                </section>
+
+                <section className="onboard-workspace-section">
+                  <h3 className="onboard-workspace-section-title">Contact Information</h3>
+                  <div className="onboard-workspace-grid">
+                    <div className="onboard-field full">
                       <label className="onboard-label">Your Name</label>
                       <input
                         className="onboard-input"
                         value={fullName}
                         onChange={(e) => setFullName(e.target.value)}
-                        placeholder="John Doe"
+                        placeholder="John Smith"
                         required
                       />
                     </div>
@@ -187,7 +178,7 @@ export default function OnboardingPage() {
                         className="onboard-input"
                         value={contactEmail}
                         onChange={(e) => setContactEmail(e.target.value)}
-                        placeholder="admin@gracecathedral.org"
+                        placeholder="admin@church.org"
                         required
                       />
                     </div>
@@ -201,7 +192,12 @@ export default function OnboardingPage() {
                         placeholder="+91 98765 43210"
                       />
                     </div>
+                  </div>
+                </section>
 
+                <section className="onboard-workspace-section">
+                  <h3 className="onboard-workspace-section-title">Location Settings</h3>
+                  <div className="onboard-workspace-grid">
                     <div className="onboard-field">
                       <label className="onboard-label">Country</label>
                       <input
@@ -212,7 +208,7 @@ export default function OnboardingPage() {
                       />
                     </div>
 
-                    <div className="onboard-field full">
+                    <div className="onboard-field">
                       <label className="onboard-label">Timezone</label>
                       <input
                         className="onboard-input"
@@ -223,29 +219,18 @@ export default function OnboardingPage() {
                       />
                     </div>
                   </div>
+                </section>
 
-                  {error ? (
-                    <div style={{ background: '#ffdad6', color: '#93000a', padding: '12px 14px', borderRadius: '12px', fontSize: '13px', marginTop: '18px' }}>
-                      {error}
-                    </div>
-                  ) : null}
-                </form>
-              </div>
+                <div className="onboard-workspace-tip">
+                  <strong>Tip:</strong> Your church slug becomes part of the workspace identity. Choose something memorable and easy to share.
+                </div>
 
-              <div className="onboard-helper-row">
-                <div className="onboard-helper-card">
-                  <div className="onboard-helper-title">Secure Foundation</div>
-                  <div className="onboard-helper-copy">Your workspace is created with structured access and protected settings from the start.</div>
-                </div>
-                <div className="onboard-helper-card">
-                  <div className="onboard-helper-title">Bespoke Branding</div>
-                  <div className="onboard-helper-copy">The next step lets you shape the church identity, color palette, and welcome voice.</div>
-                </div>
-                <div className="onboard-helper-card">
-                  <div className="onboard-helper-title">Global Reach</div>
-                  <div className="onboard-helper-copy">Centers, members, students, and attendance all grow from this workspace foundation.</div>
-                </div>
-              </div>
+                {error ? (
+                  <div style={{ background: '#ffdad6', color: '#93000a', padding: '12px 14px', borderRadius: '12px', fontSize: '13px', marginTop: '18px' }}>
+                    {error}
+                  </div>
+                ) : null}
+              </form>
             </div>
           </div>
 

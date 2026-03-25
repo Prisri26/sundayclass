@@ -130,94 +130,59 @@ function BrandingOnboardingContent() {
                 Apply your church identity so the workspace feels truly yours. This helps members recognize their digital home.
               </p>
 
-              <div className="onboard-info-strip">
-                <div className="onboard-info-strip-item">
-                  <span className="onboard-info-strip-label">Visible across the product</span>
-                  <strong>Brand choices flow into web workspace screens first, then into the mobile church-code login experience.</strong>
-                </div>
-                <div className="onboard-info-strip-item">
-                  <span className="onboard-info-strip-label">Keep it restrained</span>
-                  <strong>The strongest church workspaces feel branded, calm, and recognizable without looking busy or playful.</strong>
-                </div>
-              </div>
-
-              <div className="onboard-panel">
-                <div className="onboard-panel-intro">
-                  <div className="onboard-panel-intro-title">Identity and visual language</div>
-                  <div className="onboard-panel-intro-copy">
-                    Give your church workspace a recognizable presence with logo, color palette, and welcome messaging before teachers and members begin using PrayLoom.
-                  </div>
-                </div>
-
-                <div className="onboard-grid-2">
-                  <div className="onboard-field">
-                    <label className="onboard-label">Church Display Name</label>
-                    <input className="onboard-input" value={churchDisplayName} onChange={(e) => setChurchDisplayName(e.target.value)} placeholder="St. Jude's Episcopal Church" />
-                  </div>
-                  <div className="onboard-field">
-                    <label className="onboard-label">Short Name</label>
-                    <input className="onboard-input" value={shortName} onChange={(e) => setShortName(e.target.value)} placeholder="St. Judes" />
-                  </div>
-                </div>
-
-                <div className="onboard-brand-builder">
-                  <div className="onboard-brand-builder-main">
-                    <div className="onboard-label" style={{ marginBottom: 12 }}>Visual Assets</div>
-                    <div className="onboard-brand-upload-row">
-                      <label className="onboard-brand-upload">
-                        {logoPreview ? (
-                          <img src={logoPreview} alt="Logo preview" className="onboard-brand-upload-preview" />
-                        ) : (
-                          <div className="onboard-brand-upload-empty">
-                            <span>+</span>
-                            <strong>Add logo</strong>
-                          </div>
-                        )}
-                        <input type="file" accept="image/*" onChange={handleLogoChange} style={{ display: 'none' }} />
-                      </label>
-                      <div className="onboard-brand-upload-copy">
-                        <div className="onboard-helper-title">Upload a logo your members will recognize instantly.</div>
-                        <div className="onboard-helper-copy">
-                          Recommended: PNG or SVG with transparent background. Your uploaded logo will appear across web workspace surfaces and the mobile church-code login flow.
-                        </div>
-                        <div className="onboard-brand-upload-notes">
-                          <span>Transparent background preferred</span>
-                          <span>Square logos work best</span>
-                        </div>
+              <div className="onboard-branding-layout">
+                <div className="onboard-branding-form">
+                  <section className="onboard-branding-section">
+                    <h3 className="onboard-branding-section-title">Display Names</h3>
+                    <div className="onboard-branding-fields">
+                      <div className="onboard-field">
+                        <label className="onboard-label">Church Display Name</label>
+                        <input className="onboard-input" value={churchDisplayName} onChange={(e) => setChurchDisplayName(e.target.value)} placeholder="Grace Community Church" />
+                      </div>
+                      <div className="onboard-field">
+                        <label className="onboard-label">Short Name</label>
+                        <input className="onboard-input" value={shortName} onChange={(e) => setShortName(e.target.value)} placeholder="GCC" />
                       </div>
                     </div>
-                  </div>
+                  </section>
 
-                  <div className="onboard-brand-builder-side">
-                    <div className="onboard-label" style={{ marginBottom: 12 }}>Quick Palette Direction</div>
-                    <div className="onboard-palette-grid">
+                  <section className="onboard-branding-section">
+                    <h3 className="onboard-branding-section-title">Church Logo</h3>
+                    <label className="onboard-branding-upload">
+                      <div className="onboard-branding-upload-icon">{logoPreview ? null : '+'}</div>
+                      <div className="onboard-branding-upload-text">
+                        <strong>{logoPreview ? 'Replace your logo' : 'Upload your logo'}</strong>
+                        <span>PNG, JPG or SVG. Transparent background preferred.</span>
+                      </div>
+                      {logoPreview ? <img src={logoPreview} alt="Logo preview" className="onboard-branding-upload-preview" /> : null}
+                      <input type="file" accept="image/*" onChange={handleLogoChange} style={{ display: 'none' }} />
+                    </label>
+                  </section>
+
+                  <section className="onboard-branding-section">
+                    <h3 className="onboard-branding-section-title">Brand Colors</h3>
+                    <div className="onboard-branding-preset-grid">
                       {BRAND_PALETTES.map((palette) => (
                         <button
                           type="button"
                           key={palette.id}
-                          className="onboard-palette-card"
+                          className="onboard-branding-preset"
                           onClick={() => applyPalette(palette)}
                         >
-                          <div className="onboard-palette-card-swatches">
-                            <span style={{ background: palette.primary }} />
-                            <span style={{ background: palette.secondary }} />
-                            <span style={{ background: palette.accent }} />
+                          <div className="onboard-branding-preset-swatches">
+                            <span style={{ backgroundColor: palette.primary }} />
+                            <span style={{ backgroundColor: palette.secondary }} />
+                            <span style={{ backgroundColor: palette.accent }} />
                           </div>
-                          <div className="onboard-palette-card-name">{palette.name}</div>
+                          <div className="onboard-branding-preset-name">{palette.name}</div>
                         </button>
                       ))}
                     </div>
-                  </div>
-                </div>
 
-                <div style={{ marginTop: 36 }}>
-                  <div className="onboard-label" style={{ marginBottom: 14 }}>Brand Color Palette</div>
-                  <div className="onboard-color-grid">
-                    {colorFields.map((field) => (
-                      <div key={field.label} className="onboard-color-card">
-                        <div className="onboard-color-head">
-                          <span className="onboard-label" style={{ fontSize: 11 }}>{field.label}</span>
-                          <label className="onboard-color-picker-button" style={{ background: field.value }}>
+                    <div className="onboard-branding-color-stack">
+                      {colorFields.map((field) => (
+                        <div key={field.label} className="onboard-branding-color-row">
+                          <label className="onboard-branding-color-dot" style={{ backgroundColor: field.value }}>
                             <input
                               type="color"
                               value={field.value}
@@ -225,81 +190,103 @@ function BrandingOnboardingContent() {
                               className="onboard-color-picker-input"
                             />
                           </label>
-                        </div>
-                        <input
-                          className="onboard-input"
-                          value={field.value}
-                          onChange={(e) => field.setValue(e.target.value)}
-                        />
-                        <div className="onboard-color-swatch-row">
-                          {BRAND_SWATCHES.map((swatch) => (
-                            <button
-                              type="button"
-                              key={`${field.label}-${swatch}`}
-                              className={`onboard-color-swatch${field.value.toLowerCase() === swatch.toLowerCase() ? ' active' : ''}`}
-                              style={{ background: swatch }}
-                              onClick={() => field.setValue(swatch)}
-                              aria-label={`${field.label} ${swatch}`}
+                          <div className="onboard-branding-color-field">
+                            <label className="onboard-label">{field.label} Color</label>
+                            <input
+                              className="onboard-input onboard-input-mono"
+                              value={field.value}
+                              onChange={(e) => field.setValue(e.target.value)}
                             />
-                          ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="onboard-color-swatch-row">
+                      {BRAND_SWATCHES.map((swatch) => (
+                        <button
+                          type="button"
+                          key={`shared-${swatch}`}
+                          className={`onboard-color-swatch${[primaryColor, secondaryColor, accentColor].some((value) => value.toLowerCase() === swatch.toLowerCase()) ? ' active' : ''}`}
+                          style={{ background: swatch }}
+                          onClick={() => setPrimaryColor(swatch)}
+                          aria-label={`Use ${swatch} as primary`}
+                        />
+                      ))}
+                    </div>
+                  </section>
+
+                  <section className="onboard-branding-section">
+                    <h3 className="onboard-branding-section-title">Welcome Messages</h3>
+                    <div className="onboard-branding-fields is-single">
+                      <div className="onboard-field">
+                        <label className="onboard-label">Welcome Title</label>
+                        <input className="onboard-input" value={welcomeTitle} onChange={(e) => setWelcomeTitle(e.target.value)} placeholder="Welcome to our church" />
+                      </div>
+                      <div className="onboard-field">
+                        <label className="onboard-label">Welcome Subtitle</label>
+                        <input className="onboard-input" value={welcomeSubtitle} onChange={(e) => setWelcomeSubtitle(e.target.value)} placeholder="Join us in worship and fellowship" />
+                      </div>
+                    </div>
+                  </section>
+
+                  {error ? (
+                    <div style={{ background: '#ffdad6', color: '#93000a', padding: '12px 14px', borderRadius: '12px', fontSize: '13px', marginTop: '8px' }}>
+                      {error}
+                    </div>
+                  ) : null}
+                </div>
+
+                <aside className="onboard-branding-preview-panel">
+                  <h3 className="onboard-branding-section-title">Live Preview</h3>
+                  <div className="onboard-branding-preview-shell">
+                    <div
+                      className="onboard-branding-preview-top"
+                      style={{ background: `linear-gradient(135deg, ${primaryColor} 0%, ${secondaryColor} 100%)` }}
+                    >
+                      <div className="onboard-branding-preview-glow" style={{ backgroundColor: accentColor }} />
+                    </div>
+
+                    <div className="onboard-branding-preview-content">
+                      <div className="onboard-branding-preview-logo-frame">
+                        <div
+                          className="onboard-branding-preview-logo"
+                          style={{ backgroundColor: primaryColor }}
+                        >
+                          {logoPreview ? (
+                            <img src={logoPreview} alt="Logo preview" className="onboard-branding-preview-logo-image" />
+                          ) : (
+                            previewInitials
+                          )}
                         </div>
                       </div>
-                    ))}
-                  </div>
-                </div>
 
-                <div style={{ marginTop: 36, background: 'rgba(242, 243, 255, 0.6)', borderRadius: 18, padding: 24 }}>
-                  <div className="onboard-label" style={{ marginBottom: 14 }}>Workspace Welcome Message</div>
-                  <div className="onboard-field" style={{ marginBottom: 16 }}>
-                    <label className="onboard-label" style={{ fontSize: 11 }}>Welcome Title</label>
-                    <input className="onboard-input" value={welcomeTitle} onChange={(e) => setWelcomeTitle(e.target.value)} placeholder="Welcome to the St. Jude's Portal" />
-                  </div>
-                  <div className="onboard-field">
-                    <label className="onboard-label" style={{ fontSize: 11 }}>Welcome Subtitle</label>
-                    <textarea className="onboard-textarea" rows={3} value={welcomeSubtitle} onChange={(e) => setWelcomeSubtitle(e.target.value)} placeholder="Enter a brief greeting for your community members..." />
-                  </div>
-                </div>
+                      <h2 className="onboard-branding-preview-name">{churchDisplayName || 'Your Church Name'}</h2>
 
-                <div className="onboard-brand-preview">
-                  <div className="onboard-brand-preview-header">
-                    <div>
-                      <div className="onboard-context-eyebrow">Live Preview</div>
-                      <div className="onboard-brand-preview-title">{churchDisplayName || shortName || churchId || 'Your church workspace'}</div>
-                    </div>
-                    <div className="onboard-brand-preview-palette">
-                      <span style={{ background: primaryColor }} />
-                      <span style={{ background: secondaryColor }} />
-                      <span style={{ background: accentColor }} />
-                    </div>
-                  </div>
-                  <div className="onboard-brand-preview-card">
-                    <div className="onboard-brand-preview-badge" style={{ background: `linear-gradient(135deg, ${primaryColor} 0%, ${secondaryColor} 100%)` }}>
-                      {logoPreview ? <img src={logoPreview} alt="Logo preview" className="onboard-brand-preview-badge-logo" /> : previewInitials}
-                    </div>
-                    <div>
-                      <div className="onboard-brand-preview-headline">{previewTitle}</div>
-                      <div className="onboard-brand-preview-copy">{previewSubtitle}</div>
-                    </div>
-                  </div>
-                  <div className="onboard-brand-preview-surface">
-                    <div className="onboard-brand-preview-surface-top" style={{ background: `linear-gradient(135deg, ${primaryColor} 0%, ${secondaryColor} 100%)` }}>
-                      <div className="onboard-brand-preview-surface-chip">Church Workspace</div>
-                      <div className="onboard-brand-preview-surface-stat" style={{ background: accentColor }} />
-                    </div>
-                    <div className="onboard-brand-preview-surface-body">
-                      <div className="onboard-brand-preview-surface-card" />
-                      <div className="onboard-brand-preview-surface-card" />
-                      <div className="onboard-brand-preview-surface-line" style={{ background: `${secondaryColor}22` }} />
-                      <div className="onboard-brand-preview-surface-line short" style={{ background: `${accentColor}33` }} />
-                    </div>
-                  </div>
-                </div>
+                      <div className="onboard-branding-preview-copy-block">
+                        <div className="onboard-branding-preview-headline">{previewTitle}</div>
+                        <div className="onboard-branding-preview-copy">{previewSubtitle}</div>
+                      </div>
 
-                {error ? (
-                  <div style={{ background: '#ffdad6', color: '#93000a', padding: '12px 14px', borderRadius: '12px', fontSize: '13px', marginTop: '18px' }}>
-                    {error}
+                      <button
+                        type="button"
+                        className="onboard-branding-preview-button"
+                        style={{ backgroundColor: primaryColor }}
+                      >
+                        Get Started
+                      </button>
+
+                      <div className="onboard-branding-preview-palette">
+                        <div className="onboard-branding-preview-palette-label">Brand Colors</div>
+                        <div className="onboard-branding-preview-palette-swatches">
+                          <span style={{ backgroundColor: primaryColor }} />
+                          <span style={{ backgroundColor: secondaryColor }} />
+                          <span style={{ backgroundColor: accentColor }} />
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                ) : null}
+                </aside>
               </div>
             </div>
           </div>

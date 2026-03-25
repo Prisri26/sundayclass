@@ -136,7 +136,7 @@ function MembersOnboardingContent() {
       }
 
       await setOnboardingState(churchId, 'setup_completed');
-      router.push('/dashboard');
+      router.push(`/onboarding/completion?church=${encodeURIComponent(churchId)}`);
     } catch (err: any) {
       setError(err?.message || 'Failed to finish setup. Please try again.');
     } finally {
@@ -183,23 +183,21 @@ function MembersOnboardingContent() {
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: 'minmax(320px, 0.92fr) minmax(360px, 1.08fr)', gap: '42px', marginTop: '38px' }}>
-                <section>
-                  <div className="onboard-panel" style={{ marginTop: 0, background: '#f2f3ff' }}>
-                    <div className="onboard-panel-intro">
-                      <div className="onboard-panel-intro-title">Member provisioning</div>
-                      <div className="onboard-panel-intro-copy">
-                        Each member gets a generated PrayLoom login ID such as <strong>john@hosanna.prayloom</strong>. Temporary passwords are generated for the provisioning queue and can be rotated later.
-                      </div>
-                    </div>
-                    <h2 className="font-editorial" style={{ fontSize: '34px', color: '#131b2e', marginBottom: '24px' }}>New Team Member</h2>
-
-                    <div className="onboard-panel-form">
-                      <div className="onboard-field">
+              <div className="onboard-members-layout">
+                <section className="onboard-members-form">
+                  <div className="onboard-workspace-section">
+                    <div className="onboard-workspace-section-title">Member Details</div>
+                    <div className="onboard-workspace-grid">
+                      <div className="onboard-field full">
                         <label className="onboard-label">Full Name</label>
                         <input className="onboard-input" placeholder="John Samuel" value={fullName} onChange={(e) => setFullName(e.target.value)} />
                       </div>
+                    </div>
+                  </div>
 
+                  <div className="onboard-workspace-section">
+                    <div className="onboard-workspace-section-title">Access Role</div>
+                    <div className="onboard-workspace-grid">
                       <div className="onboard-field">
                         <label className="onboard-label">Role</label>
                         <select className="onboard-select" value={role} onChange={(e) => setRole(e.target.value as DraftRole)}>
@@ -209,7 +207,6 @@ function MembersOnboardingContent() {
                           <option value="viewer">Viewer</option>
                         </select>
                       </div>
-
                       <div className="onboard-field">
                         <label className="onboard-label">Center Access</label>
                         <select
@@ -226,77 +223,75 @@ function MembersOnboardingContent() {
                           ))}
                         </select>
                       </div>
-
-                      <button type="button" className="onboard-primary-btn" style={{ width: '100%' }} onClick={addDraft} disabled={loadingCenters}>
-                        Add Provisioning Record
-                      </button>
                     </div>
                   </div>
 
+                  <div className="onboard-workspace-tip">
+                    <strong>Provisioning rule:</strong> PrayLoom generates a unique login like <strong>john@churchslug.prayloom</strong> and a one-time temporary password. The member must change it on first login.
+                  </div>
+
+                  <button type="button" className="onboard-primary-btn" style={{ width: '100%' }} onClick={addDraft} disabled={loadingCenters}>
+                    Add Provisioning Record
+                  </button>
+
                   {error ? (
-                    <div style={{ background: '#ffdad6', color: '#93000a', padding: '12px 14px', borderRadius: '12px', fontSize: '13px', marginTop: '18px' }}>
+                    <div className="onboard-error-banner">
                       {error}
                     </div>
                   ) : null}
                 </section>
 
-                <section className="onboard-table-panel">
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-                    <h2 className="font-editorial" style={{ fontSize: '34px', color: '#131b2e' }}>Provisioning Queue</h2>
-                    <span className="onboard-chip">{drafts.length} Draft{drafts.length === 1 ? '' : 's'}</span>
-                  </div>
-
-                  {createdCredentials.length ? (
-                    <div style={{ marginBottom: '24px', border: '1px solid rgba(57,44,193,0.14)', background: 'rgba(242,243,255,0.72)', borderRadius: '20px', padding: '18px' }}>
-                      <div className="onboard-helper-title">Generated credentials</div>
-                      <div className="onboard-helper-copy" style={{ marginTop: '8px' }}>
-                        Save these credentials securely. This provisioning queue is ready for the next account-creation stage.
+                <aside className="onboard-members-preview">
+                  <div className="onboard-preview-panel">
+                    <div className="onboard-preview-header">
+                      <div>
+                        <div className="onboard-preview-eyebrow">Provisioning Queue</div>
+                        <div className="onboard-preview-title">Team Access</div>
                       </div>
-                      <div style={{ display: 'grid', gap: '12px', marginTop: '16px' }}>
+                      <span className="onboard-chip">{drafts.length} Draft{drafts.length === 1 ? '' : 's'}</span>
+                    </div>
+                    <div className="onboard-preview-copy">
+                      Add teachers, volunteers, and leaders here. Each person receives a structured PrayLoom identity instead of a shared account.
+                    </div>
+
+                    {createdCredentials.length ? (
+                      <div className="onboard-credential-stack">
                         {createdCredentials.map((credential) => (
-                          <div key={credential.id} style={{ borderRadius: '16px', background: '#ffffff', border: '1px solid rgba(214,220,236,0.8)', padding: '14px 16px' }}>
-                            <div style={{ fontWeight: 700, color: '#131b2e' }}>{credential.fullName}</div>
-                            <div style={{ marginTop: '6px', color: '#465069', fontSize: '14px' }}>Login ID: {credential.loginId}</div>
-                            <div style={{ marginTop: '4px', color: '#465069', fontSize: '14px' }}>Temporary Password: {credential.temporaryPassword}</div>
+                          <div key={credential.id} className="onboard-credential-card">
+                            <div className="onboard-credential-name">{credential.fullName}</div>
+                            <div className="onboard-credential-line">Login ID: {credential.loginId}</div>
+                            <div className="onboard-credential-line">Temporary Password: {credential.temporaryPassword}</div>
                           </div>
                         ))}
                       </div>
-                    </div>
-                  ) : null}
+                    ) : null}
 
-                  <table className="onboard-table">
-                    <thead>
-                      <tr>
-                        <th>Member</th>
-                        <th>Role</th>
-                        <th style={{ textAlign: 'right' }}>Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
+                    <div className="onboard-member-queue">
                       {drafts.map((draft) => (
-                        <tr key={draft.id}>
-                          <td>
-                            <div style={{ fontWeight: 700, color: '#131b2e' }}>{draft.fullName}</div>
-                            <div style={{ fontSize: '12px', color: '#777587' }}>{draft.centerNames.join(', ')}</div>
-                          </td>
-                          <td style={{ textTransform: 'capitalize' }}>{draft.role.replace('_', ' ')}</td>
-                          <td style={{ textAlign: 'right' }}>
+                        <div key={draft.id} className="onboard-member-card">
+                          <div className="onboard-member-card-main">
+                            <div className="onboard-member-card-name">{draft.fullName}</div>
+                            <div className="onboard-member-card-meta">{draft.centerNames.join(', ')}</div>
+                          </div>
+                          <div className="onboard-member-card-side">
+                            <span className="onboard-chip">{draft.role.replace('_', ' ')}</span>
                             <button type="button" className="onboard-ghost-btn" onClick={() => removeDraft(draft.id)}>
                               Remove
                             </button>
-                          </td>
-                        </tr>
+                          </div>
+                        </div>
                       ))}
+
                       {!drafts.length ? (
-                        <tr>
-                          <td colSpan={3} style={{ paddingTop: '28px', color: '#777587' }}>
-                            Add teachers, volunteers, and church leaders here. PrayLoom will generate login IDs in the format <strong>name@churchslug.prayloom</strong>.
-                          </td>
-                        </tr>
+                        <div className="onboard-center-empty">
+                          <div className="onboard-preview-mini-badge">Identity setup</div>
+                          <div className="onboard-center-empty-title">Start with one teacher</div>
+                          <div className="onboard-helper-copy">You can keep this light now and add more ministry members after launch.</div>
+                        </div>
                       ) : null}
-                    </tbody>
-                  </table>
-                </section>
+                    </div>
+                  </div>
+                </aside>
               </div>
             </div>
           </div>

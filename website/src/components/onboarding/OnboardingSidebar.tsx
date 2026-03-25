@@ -35,6 +35,18 @@ export default function OnboardingSidebar({
   contextCopy,
   contextMeta = [],
 }: Props) {
+  const defaultCaptions: Record<string, string> = {
+    'Plan Selection': 'Choose your tier',
+    'Workspace Basics': 'Church information',
+    'Identity & Branding': 'Visual identity',
+    'Center Setup': 'Ministry structure',
+    'Team Invitation': 'Add your team',
+  };
+
+  const activeStepIndex = steps.findIndex((step) => step.status === 'active');
+  const railProgressPercent =
+    activeStepIndex <= 0 ? 0 : (activeStepIndex / Math.max(steps.length - 1, 1)) * 100;
+
   return (
     <aside className="onboard-sidebar">
       <div className="onboard-sidebar-content">
@@ -51,6 +63,7 @@ export default function OnboardingSidebar({
 
           <div className="onboard-step-rail">
             <div className="onboard-step-rail-line" />
+            <div className="onboard-step-rail-progress" style={{ height: `${railProgressPercent}%` }} />
             <div className="onboard-checklist">
               {steps.map((step, index) => (
                 <div
@@ -62,9 +75,7 @@ export default function OnboardingSidebar({
                   </div>
                   <div className="onboard-check-copy">
                     <span className="onboard-check-title">{step.label}</span>
-                    <span className="onboard-check-caption">
-                      {step.status === 'active' ? 'Current step' : step.status === 'done' ? 'Completed' : 'Upcoming'}
-                    </span>
+                    <span className="onboard-check-caption">{defaultCaptions[step.label] || 'Setup step'}</span>
                   </div>
                 </div>
               ))}
@@ -72,22 +83,7 @@ export default function OnboardingSidebar({
           </div>
         </div>
 
-        <div className="onboard-sidebar-motion-card">
-          <div className="onboard-sidebar-motion-orb" />
-          <div className="onboard-sidebar-motion-label">Onboarding Flow</div>
-          <div className="onboard-sidebar-motion-title">Calm, guided setup for a branded church workspace.</div>
-          <div className="onboard-sidebar-motion-copy">
-            PrayLoom should feel like one deliberate journey, not a stack of forms. Each step prepares the next one.
-          </div>
-        </div>
-      </div>
-
-      <div className="onboard-sidebar-footer">
-        <div className="onboard-sidebar-quote">{quote}</div>
-      </div>
-
-      {contextTitle ? (
-        <div className="onboard-sidebar-floating-context">
+        {contextTitle ? (
           <div className="onboard-context-card">
             {contextEyebrow ? <div className="onboard-context-eyebrow">{contextEyebrow}</div> : null}
             <div className="onboard-context-title">{contextTitle}</div>
@@ -102,8 +98,12 @@ export default function OnboardingSidebar({
               </div>
             ) : null}
           </div>
-        </div>
-      ) : null}
+        ) : null}
+      </div>
+
+      <div className="onboard-sidebar-footer">
+        <div className="onboard-sidebar-quote">{quote}</div>
+      </div>
     </aside>
   );
 }
