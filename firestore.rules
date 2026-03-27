@@ -5,47 +5,72 @@ service cloud.firestore {
       return request.auth != null;
     }
 
+    function isVerified() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
     function userDocPath() {
       return /databases/$(database)/documents/users/$(request.auth.uid);
     }
 
-    function userDocExists() {
+    function userExists() {
       return isSignedIn() && exists(userDocPath());
     }
 
+    function userData() {
+      return get(userDocPath()).data;
+    }
+
     function isPlatformAdmin() {
-      return userDocExists() && get(userDocPath()).data.globalRole == 'platform_admin';
+      return userExists() && userData().globalRole == 'platform_admin';
+    }
+
+    function churchDocPath(churchId) {
+      return /databases/$(database)/documents/churches/$(churchId);
+    }
+
+    function churchExists(churchId) {
+      return exists(churchDocPath(churchId));
     }
 
     function memberDocPath(churchId) {
       return /databases/$(database)/documents/churches/$(churchId)/members/$(request.auth.uid);
     }
 
-    function isChurchMember(churchId) {
-      return isSignedIn()
-        && exists(memberDocPath(churchId))
-        && get(memberDocPath(churchId)).data.status == 'active';
+    function memberExists(churchId) {
+      return isSignedIn() && exists(memberDocPath(churchId));
     }
 
-    function churchRole(churchId) {
-      return get(memberDocPath(churchId)).data.role;
+    function memberData(churchId) {
+      return get(memberDocPath(churchId)).data;
+    }
+
+    function belongsToChurch(churchId) {
+      return memberExists(churchId)
+        && memberData(churchId).status == 'active';
+    }
+
+    function roleInChurch(churchId) {
+      return memberData(churchId).role;
     }
 
     function isChurchAdmin(churchId) {
       return isPlatformAdmin()
-        || (isChurchMember(churchId) && churchRole(churchId) == 'church_admin');
+        || (isVerified()
+          && belongsToChurch(churchId)
+          && roleInChurch(churchId) == 'church_admin');
     }
 
     function isTeacher(churchId) {
-      return isChurchMember(churchId) && churchRole(churchId) == 'teacher';
+      return belongsToChurch(churchId) && roleInChurch(churchId) == 'teacher';
     }
 
     function isVolunteer(churchId) {
-      return isChurchMember(churchId) && churchRole(churchId) == 'volunteer';
+      return belongsToChurch(churchId) && roleInChurch(churchId) == 'volunteer';
     }
 
     function canReadChurch(churchId) {
-      return isPlatformAdmin() || isChurchMember(churchId);
+      return isPlatformAdmin() || belongsToChurch(churchId);
     }
 
     function canManageChurch(churchId) {
@@ -53,13 +78,15 @@ service cloud.firestore {
     }
 
     function canWriteOperationalData(churchId) {
-      return isChurchAdmin(churchId) || isTeacher(churchId) || isVolunteer(churchId);
+      return canManageChurch(churchId)
+        || isTeacher(churchId)
+        || isVolunteer(churchId);
     }
 
     function isBootstrapChurchCreator(churchId) {
       return isSignedIn()
-        && exists(/databases/$(database)/documents/churches/$(churchId))
-        && get(/databases/$(database)/documents/churches/$(churchId)).data.createdByUserId == request.auth.uid;
+        && churchExists(churchId)
+        && get(churchDocPath(churchId)).data.createdByUserId == request.auth.uid;
     }
 
     match /users/{userId} {
@@ -71,11 +98,11 @@ service cloud.firestore {
 
     match /churchCodes/{churchCode} {
       allow read: if true;
-      allow create: if isSignedIn() && request.resource.data.createdByUserId == request.auth.uid;
+      allow create: if isSignedIn()
+        && request.resource.data.createdByUserId == request.auth.uid
+        && request.resource.data.churchId is string;
       allow update, delete: if isPlatformAdmin()
-        || (isSignedIn()
-          && resource.data.churchId is string
-          && isChurchAdmin(resource.data.churchId));
+        || (resource.data.churchId is string && canManageChurch(resource.data.churchId));
     }
 
     match /churches/{churchId} {
@@ -83,99 +110,91 @@ service cloud.firestore {
       allow create: if isSignedIn()
         && request.resource.data.createdByUserId == request.auth.uid
         && request.resource.data.slug == churchId;
-      allow update, delete: if canManageChurch(churchId) || isPlatformAdmin();
+      allow update, delete: if canManageChurch(churchId);
 
       match /members/{userId} {
         allow read: if isPlatformAdmin()
-          || (isSignedIn() && userId == request.auth.uid)
+          || (isSignedIn() && request.auth.uid == userId)
           || canManageChurch(churchId);
-        allow create: if (isBootstrapChurchCreator(churchId)
-            && userId == request.auth.uid
-            && request.resource.data.userId == request.auth.uid
-            && request.resource.data.role == 'church_admin'
-            && request.resource.data.status == 'active')
+
+        allow create: if isPlatformAdmin()
           || canManageChurch(churchId)
-          || isPlatformAdmin();
-        allow update, delete: if canManageChurch(churchId) || isPlatformAdmin();
+          || (
+            isBootstrapChurchCreator(churchId)
+            && request.auth.uid == userId
+            && request.resource.data.userId == request.auth.uid
+            && request.resource.data.churchId == churchId
+            && request.resource.data.role == 'church_admin'
+            && request.resource.data.status == 'active'
+          );
+
+        allow update, delete: if isPlatformAdmin() || canManageChurch(churchId);
       }
 
       match /provisioningMembers/{provisioningId} {
-        allow read, create, update, delete: if canManageChurch(churchId) || isPlatformAdmin();
+        allow read, create, update, delete: if canManageChurch(churchId);
       }
 
       match /settings/{docId} {
         allow read: if canReadChurch(churchId);
-        allow create: if isBootstrapChurchCreator(churchId) || canManageChurch(churchId) || isPlatformAdmin();
-        allow update, delete: if canManageChurch(churchId) || isPlatformAdmin();
+        allow create: if isPlatformAdmin()
+          || canManageChurch(churchId)
+          || isBootstrapChurchCreator(churchId);
+        allow update, delete: if isPlatformAdmin() || canManageChurch(churchId);
       }
 
       match /centers/{centerId} {
         allow read: if canReadChurch(churchId);
-        allow create: if isBootstrapChurchCreator(churchId) || canManageChurch(churchId) || isPlatformAdmin();
-        allow update, delete: if canManageChurch(churchId) || isPlatformAdmin();
+        allow create: if isPlatformAdmin()
+          || canManageChurch(churchId)
+          || isBootstrapChurchCreator(churchId);
+        allow update, delete: if isPlatformAdmin() || canManageChurch(churchId);
       }
 
       match /students/{studentId} {
         allow read: if canReadChurch(churchId);
         allow create, update: if canWriteOperationalData(churchId);
-        allow delete: if canManageChurch(churchId) || isPlatformAdmin();
+        allow delete: if canManageChurch(churchId);
       }
 
       match /parents/{parentId} {
         allow read: if canReadChurch(churchId);
         allow create, update: if canWriteOperationalData(churchId);
-        allow delete: if canManageChurch(churchId) || isPlatformAdmin();
+        allow delete: if canManageChurch(churchId);
       }
 
       match /attendanceSessions/{sessionId} {
         allow read: if canReadChurch(churchId);
         allow create, update: if canWriteOperationalData(churchId);
-        allow delete: if canManageChurch(churchId) || isPlatformAdmin();
+        allow delete: if canManageChurch(churchId);
       }
 
       match /attendanceRecords/{recordId} {
         allow read: if canReadChurch(churchId);
         allow create, update: if canWriteOperationalData(churchId);
-        allow delete: if canManageChurch(churchId) || isPlatformAdmin();
+        allow delete: if canManageChurch(churchId);
       }
 
       match /announcements/{announcementId} {
         allow read: if canReadChurch(churchId);
-        allow create, update, delete: if canManageChurch(churchId) || isPlatformAdmin();
+        allow create, update, delete: if canManageChurch(churchId);
       }
 
       match /events/{eventId} {
         allow read: if canReadChurch(churchId);
-        allow create, update, delete: if canManageChurch(churchId) || isPlatformAdmin();
+        allow create, update, delete: if canManageChurch(churchId);
       }
 
       match /followUps/{followUpId} {
         allow read: if canReadChurch(churchId);
         allow create, update: if canWriteOperationalData(churchId);
-        allow delete: if canManageChurch(churchId) || isPlatformAdmin();
+        allow delete: if canManageChurch(churchId);
       }
 
       match /spotlight/{docId} {
-        allow read: if true;
-        allow create, update, delete: if canWriteOperationalData(churchId) || isPlatformAdmin();
+        allow read: if canReadChurch(churchId);
+        allow create, update, delete: if canManageChurch(churchId);
       }
-    }
-
-    match /students/{studentId} {
-      allow read, write: if isSignedIn();
-    }
-
-    match /attendance/{recordId} {
-      allow read, write: if isSignedIn();
-    }
-
-    match /class_sessions/{sessionId} {
-      allow read, write: if isSignedIn();
-    }
-
-    match /spotlight/{doc} {
-      allow read: if true;
-      allow write: if isSignedIn();
     }
   }
 }

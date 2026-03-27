@@ -23,6 +23,7 @@ export default function VerifyEmailPage() {
   const { user, loading, isEmailVerified } = useAuth();
   const [sending, setSending] = useState(false);
   const [checking, setChecking] = useState(false);
+  const [openingLink, setOpeningLink] = useState(false);
   const [message, setMessage] = useState('Check your inbox, click the verification link, then return here to continue into your PrayLoom workspace setup.');
   const [error, setError] = useState('');
   const redirectingRef = useRef(false);
@@ -131,6 +132,32 @@ export default function VerifyEmailPage() {
     }
   };
 
+  const handleDirectVerificationLink = async () => {
+    if (!auth.currentUser) return;
+    setOpeningLink(true);
+    setError('');
+    try {
+      const idToken = await auth.currentUser.getIdToken();
+      const response = await fetch('/api/verification-link', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${idToken}`,
+        },
+      });
+
+      const payload = await response.json();
+      if (!response.ok || !payload?.link) {
+        throw new Error(payload?.error || 'Unable to generate a verification link.');
+      }
+
+      window.location.assign(payload.link);
+    } catch (nextError: any) {
+      setError(nextError?.message || 'Unable to generate a direct verification link right now.');
+    } finally {
+      setOpeningLink(false);
+    }
+  };
+
   if (loading || !user) {
     return <div className="loading-page"><div className="spinner" /></div>;
   }
@@ -210,10 +237,18 @@ export default function VerifyEmailPage() {
                 {message}
               </div>
 
+              <div className="verify-panel-note">
+                <strong>Testing shortcut:</strong> If the verification email does not arrive within a few seconds, use the direct link below. It still verifies the same Firebase account, but without waiting for inbox delivery.
+              </div>
+
               {error ? <div className="login-panel-error">{error}</div> : null}
 
               <button type="button" className="login-panel-submit" onClick={handleRefresh} disabled={checking}>
                 {checking ? 'Checking...' : 'I have verified my email'}
+              </button>
+
+              <button type="button" className="verify-panel-submit is-secondary" onClick={handleDirectVerificationLink} disabled={openingLink}>
+                {openingLink ? 'Opening link...' : 'Open verification link for testing'}
               </button>
 
               <button type="button" className="verify-panel-submit is-secondary" onClick={handleResend} disabled={sending}>
@@ -225,7 +260,7 @@ export default function VerifyEmailPage() {
               </button>
 
               <div className="login-panel-helper">
-                Tip: after clicking the email link, just return to this tab. PrayLoom will check again when the page regains focus.
+                Tip: if email delivery is delayed while testing, use the direct verification link option and then return here. PrayLoom will check again when the page regains focus.
               </div>
             </div>
 
