@@ -9,6 +9,9 @@ const BYPASS_EMAIL_VERIFICATION =
     process.env.NODE_ENV !== 'production' &&
     process.env.NEXT_PUBLIC_BYPASS_EMAIL_VERIFICATION === 'true';
 
+export const ALLOW_UNVERIFIED_ONBOARDING =
+    process.env.NEXT_PUBLIC_ALLOW_UNVERIFIED_ONBOARDING === 'true';
+
 export type AuthStatus =
     | 'loading'
     | 'signed_out'

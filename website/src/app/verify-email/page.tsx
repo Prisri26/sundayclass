@@ -8,6 +8,7 @@ import { doc, getDoc } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../context/AuthContext';
 import { auth, db } from '../../lib/firebase';
+import { ALLOW_UNVERIFIED_ONBOARDING } from '../../context/AuthContext';
 import { mapFirebaseAuthError, sendVerificationEmailWithFallback } from '../../lib/auth';
 
 async function getVerifiedUser() {
@@ -158,6 +159,13 @@ export default function VerifyEmailPage() {
     }
   };
 
+  const handleContinueForNow = () => {
+    setError('');
+    setMessage('Continuing into setup without email verification for now. Finish workspace setup, then return to verify this admin account later.');
+    router.replace('/onboarding/plan');
+    window.location.assign('/onboarding/plan');
+  };
+
   if (loading || !user) {
     return <div className="loading-page"><div className="spinner" /></div>;
   }
@@ -250,6 +258,16 @@ export default function VerifyEmailPage() {
               <button type="button" className="verify-panel-submit is-secondary" onClick={handleDirectVerificationLink} disabled={openingLink}>
                 {openingLink ? 'Opening link...' : 'Open verification link for testing'}
               </button>
+
+              {ALLOW_UNVERIFIED_ONBOARDING ? (
+                <button
+                  type="button"
+                  className="verify-panel-submit is-secondary is-warning"
+                  onClick={handleContinueForNow}
+                >
+                  Continue setup without verification for now
+                </button>
+              ) : null}
 
               <button type="button" className="verify-panel-submit is-secondary" onClick={handleResend} disabled={sending}>
                 {sending ? 'Sending...' : 'Resend verification email'}

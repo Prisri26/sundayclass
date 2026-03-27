@@ -2,19 +2,23 @@
 
 import { useEffect } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { useAuth } from '../context/AuthContext';
+import { ALLOW_UNVERIFIED_ONBOARDING, useAuth } from '../context/AuthContext';
 
 const PASSWORD_CHANGE_PATH = '/change-password';
+const ONBOARDING_PREFIX = '/onboarding';
+const VERIFY_PATH = '/verify-email';
 
 export default function AuthRouteGate() {
   const pathname = usePathname();
   const router = useRouter();
   const { loading, isAuthenticated, isEmailVerified, mustChangePassword } = useAuth();
+  const canProceedUnverified = ALLOW_UNVERIFIED_ONBOARDING
+    && (pathname.startsWith(ONBOARDING_PREFIX) || pathname === VERIFY_PATH);
 
   useEffect(() => {
     if (loading || !isAuthenticated) return;
 
-    if (!isEmailVerified && pathname !== '/verify-email') {
+    if (!isEmailVerified && !canProceedUnverified && pathname !== VERIFY_PATH) {
       router.replace('/verify-email');
       return;
     }
@@ -27,7 +31,7 @@ export default function AuthRouteGate() {
     if (!mustChangePassword && pathname === PASSWORD_CHANGE_PATH) {
       router.replace('/dashboard');
     }
-  }, [isAuthenticated, isEmailVerified, loading, mustChangePassword, pathname, router]);
+  }, [canProceedUnverified, isAuthenticated, isEmailVerified, loading, mustChangePassword, pathname, router]);
 
   return null;
 }

@@ -1040,6 +1040,16 @@ body {
   border-color: rgba(167, 182, 214, 0.96);
 }
 
+.verify-panel-submit.is-warning {
+  background: rgba(255, 247, 231, 0.96);
+  border-color: rgba(237, 194, 110, 0.75);
+  color: #8f5b00;
+}
+
+.verify-panel-submit.is-warning:hover {
+  border-color: rgba(212, 168, 76, 0.92);
+}
+
 .verify-panel-submit.is-ghost {
   color: #6b728d;
   background: rgba(249, 250, 252, 0.96);
@@ -5258,7 +5268,7 @@ tr:hover td {
   }
 }
 
-@media (max-width: 1100px) {
+@media (max-width: 1280px) {
   .auth-stage {
     grid-template-columns: 1fr;
     gap: 24px;
@@ -5274,16 +5284,16 @@ tr:hover td {
 
   .auth-shell-login .auth-stage {
     grid-template-columns: 1fr;
-    gap: 42px;
-    padding-top: 34px;
+    gap: 30px;
+    padding-top: 28px;
   }
 
   .login-story {
-    gap: 24px;
+    gap: 18px;
   }
 
   .login-story-visual-card {
-    min-height: 340px;
+    min-height: 270px;
   }
 
   .login-story-copyblock,
@@ -5291,8 +5301,17 @@ tr:hover td {
     max-width: 100%;
   }
 
+  .login-story-title {
+    max-width: 840px;
+    font-size: clamp(36px, 4vw, 56px);
+  }
+
+  .login-story-copy {
+    max-width: 760px;
+  }
+
   .login-story-highlights {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 1fr;
   }
 
   .login-panel-wrap {
