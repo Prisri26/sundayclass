@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '../../context/AuthContext';
+import { ALLOW_UNVERIFIED_ONBOARDING, useAuth } from '../../context/AuthContext';
 import { createChurchWorkspace, getSelectedPlan, normalizeChurchSlug } from '../../lib/onboarding';
 import { getPlanDefinition, type PlanId } from '../../lib/plans';
 import OnboardingSidebar from '../../components/onboarding/OnboardingSidebar';
@@ -10,6 +10,7 @@ import OnboardingSidebar from '../../components/onboarding/OnboardingSidebar';
 export default function OnboardingPage() {
   const router = useRouter();
   const { user, loading, isEmailVerified } = useAuth();
+  const canProceedUnverified = ALLOW_UNVERIFIED_ONBOARDING;
   const defaultTimezone = useMemo(() => Intl.DateTimeFormat().resolvedOptions().timeZone || 'Asia/Kolkata', []);
   const [fullName, setFullName] = useState('');
   const [churchName, setChurchName] = useState('');
@@ -32,7 +33,7 @@ export default function OnboardingPage() {
         return;
       }
 
-      if (!isEmailVerified) {
+      if (!isEmailVerified && !canProceedUnverified) {
         router.replace('/verify-email');
         return;
       }
@@ -54,7 +55,7 @@ export default function OnboardingPage() {
     return () => {
       cancelled = true;
     };
-  }, [isEmailVerified, loading, router, user]);
+  }, [canProceedUnverified, isEmailVerified, loading, router, user]);
 
   const handleChurchNameChange = (value: string) => {
     setChurchName(value);

@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '../../../context/AuthContext';
+import { ALLOW_UNVERIFIED_ONBOARDING, useAuth } from '../../../context/AuthContext';
 import { getSelectedPlan, saveSelectedPlan } from '../../../lib/onboarding';
 import { DEFAULT_PLAN_ID, PLAN_DEFINITIONS, PlanId } from '../../../lib/plans';
 import OnboardingSidebar from '../../../components/onboarding/OnboardingSidebar';
@@ -11,6 +11,7 @@ import OnboardingSidebar from '../../../components/onboarding/OnboardingSidebar'
 export default function PlanSelectionPage() {
   const router = useRouter();
   const { user, loading, isEmailVerified } = useAuth();
+  const canProceedUnverified = ALLOW_UNVERIFIED_ONBOARDING;
   const [selectedPlanId, setSelectedPlanId] = useState<PlanId>(DEFAULT_PLAN_ID);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -24,7 +25,7 @@ export default function PlanSelectionPage() {
         router.replace('/signup');
         return;
       }
-      if (!isEmailVerified) {
+      if (!isEmailVerified && !canProceedUnverified) {
         router.replace('/verify-email');
         return;
       }
@@ -40,7 +41,7 @@ export default function PlanSelectionPage() {
     return () => {
       cancelled = true;
     };
-  }, [isEmailVerified, loading, router, user]);
+  }, [canProceedUnverified, isEmailVerified, loading, router, user]);
 
   const handleContinue = async () => {
     if (!user) return;
