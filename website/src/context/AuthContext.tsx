@@ -25,6 +25,7 @@ interface AuthContextType {
     initialized: boolean;
     isAuthenticated: boolean;
     isEmailVerified: boolean;
+    isFirebaseEmailVerified: boolean;
     mustChangePassword: boolean;
     authStatus: AuthStatus;
 }
@@ -35,6 +36,7 @@ const AuthContext = createContext<AuthContextType>({
     initialized: false,
     isAuthenticated: false,
     isEmailVerified: false,
+    isFirebaseEmailVerified: false,
     mustChangePassword: false,
     authStatus: 'loading',
 });
@@ -44,6 +46,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const [loading, setLoading] = useState(true);
     const [initialized, setInitialized] = useState(false);
     const [mustChangePassword, setMustChangePassword] = useState(false);
+    const [customEmailVerified, setCustomEmailVerified] = useState(false);
 
     useEffect(() => {
         let unsubscribeProfile: () => void = () => undefined;
@@ -51,14 +54,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             unsubscribeProfile();
             setUser(u);
             setMustChangePassword(false);
+            setCustomEmailVerified(false);
             if (u) {
                 unsubscribeProfile = onSnapshot(
                     doc(db, 'users', u.uid),
                     (snap) => {
-                        const data = snap.exists() ? snap.data() as { mustChangePassword?: boolean } : null;
+                        const data = snap.exists() ? snap.data() as {
+                          mustChangePassword?: boolean;
+                          emailVerification?: { status?: string };
+                        } : null;
                         setMustChangePassword(!!data?.mustChangePassword);
+                        setCustomEmailVerified(data?.emailVerification?.status === 'verified');
                     },
-                    () => setMustChangePassword(false),
+                    () => {
+                      setMustChangePassword(false);
+                      setCustomEmailVerified(false);
+                    },
                 );
             }
             setLoading(false);
@@ -71,19 +82,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }, []);
 
     const isAuthenticated = !!user;
-    const isEmailVerified = !!user?.emailVerified || (!!user && BYPASS_EMAIL_VERIFICATION);
+    const isFirebaseEmailVerified = !!user?.emailVerified;
+    const isEmailVerified = customEmailVerified || isFirebaseEmailVerified || (!!user && BYPASS_EMAIL_VERIFICATION);
     const authStatus: AuthStatus = loading
         ? 'loading'
         : !user
             ? 'signed_out'
-            : user.emailVerified
+            : isEmailVerified
                 ? mustChangePassword
                     ? 'signed_in_password_change_required'
                     : 'signed_in_ready'
                 : 'signed_in_unverified';
 
     return (
-        <AuthContext.Provider value={{ user, loading, initialized, isAuthenticated, isEmailVerified, mustChangePassword, authStatus }}>
+        <AuthContext.Provider value={{ user, loading, initialized, isAuthenticated, isEmailVerified, isFirebaseEmailVerified, mustChangePassword, authStatus }}>
             {children}
         </AuthContext.Provider>
     );

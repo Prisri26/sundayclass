@@ -1,3 +1,4 @@
+import { setDoc, serverTimestamp, type Timestamp } from 'firebase/firestore';
 import type { User } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 import { auth } from './firebase';
@@ -83,10 +84,43 @@ export async function sendVerificationEmailViaServer(user: User) {
   return payload;
 }
 
+export type UserSecurityState = {
+  mustChangePassword: boolean;
+  emailVerificationStatus: 'pending' | 'verified' | 'unverified';
+  emailVerificationSentAt?: Timestamp | null;
+};
+
 export async function getUserSecurityState(userId: string) {
   const snap = await getDoc(doc(db, 'users', userId));
-  const data = snap.exists() ? snap.data() as { mustChangePassword?: boolean } : null;
+  const data = snap.exists()
+    ? snap.data() as {
+        mustChangePassword?: boolean;
+        emailVerification?: {
+          status?: 'pending' | 'verified';
+          sentAt?: Timestamp | null;
+        };
+      }
+    : null;
   return {
     mustChangePassword: !!data?.mustChangePassword,
+    emailVerificationStatus: data?.emailVerification?.status || 'unverified',
+    emailVerificationSentAt: data?.emailVerification?.sentAt || null,
   };
+}
+
+export async function initializeUserProfile(user: User, fullName: string) {
+  await setDoc(
+    doc(db, 'users', user.uid),
+    {
+      email: user.email || '',
+      displayName: fullName.trim(),
+      emailVerification: {
+        status: 'pending',
+        sentAt: serverTimestamp(),
+      },
+      updatedAt: serverTimestamp(),
+      createdAt: serverTimestamp(),
+    },
+    { merge: true },
+  );
 }

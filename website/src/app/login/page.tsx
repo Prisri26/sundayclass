@@ -21,11 +21,12 @@ export default function LoginPage() {
     setLoading(true);
     try {
       const credential = await signInWithEmailAndPassword(auth, normalizeAuthIdentifier(email), password);
-      if (!credential.user.emailVerified) {
+      const security = await getUserSecurityState(credential.user.uid);
+      const isVerified = credential.user.emailVerified || security.emailVerificationStatus === 'verified';
+      if (!isVerified) {
         router.push('/verify-email');
         return;
       }
-      const security = await getUserSecurityState(credential.user.uid);
       if (security.mustChangePassword) {
         router.push('/change-password');
         return;

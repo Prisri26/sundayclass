@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { adminAuth } from '../../../lib/firebaseAdmin';
-import { sendVerificationEmailCode } from '../../../lib/verificationEmail';
+import { verifyVerificationCode } from '../../../lib/verificationEmail';
 
 function getBearerToken(request: NextRequest) {
   const authHeader = request.headers.get('authorization') || '';
@@ -16,21 +16,22 @@ export async function POST(request: NextRequest) {
     }
 
     const decoded = await adminAuth.verifyIdToken(idToken);
-    if (!decoded.email) {
-      return NextResponse.json({ error: 'Authenticated user does not have an email address.' }, { status: 400 });
+    const body = await request.json();
+    const code = String(body?.code || '').trim();
+    if (!code) {
+      return NextResponse.json({ error: 'Verification code is required.' }, { status: 400 });
     }
 
-    const result = await sendVerificationEmailCode({
+    const result = await verifyVerificationCode({
       uid: decoded.uid,
-      email: decoded.email,
-      fullName: decoded.name || null,
+      code,
     });
 
-    return NextResponse.json({ success: true, id: result.id });
+    return NextResponse.json({ success: true, ...result });
   } catch (error: any) {
     return NextResponse.json(
-      { error: error?.message || 'Unable to send verification email right now.' },
-      { status: 500 },
+      { error: error?.message || 'Unable to verify the code right now.' },
+      { status: 400 },
     );
   }
 }

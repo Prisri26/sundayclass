@@ -7,11 +7,11 @@ import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
 import { auth } from '../../lib/firebase';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../context/AuthContext';
-import { VerificationEmailRateLimitError, mapFirebaseAuthError, normalizeAuthIdentifier, sendVerificationEmailViaServer, validateSignupPassword } from '../../lib/auth';
+import { initializeUserProfile, VerificationEmailRateLimitError, mapFirebaseAuthError, normalizeAuthIdentifier, sendVerificationEmailViaServer, validateSignupPassword } from '../../lib/auth';
 
 export default function SignupPage() {
   const router = useRouter();
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, isEmailVerified } = useAuth();
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -21,9 +21,9 @@ export default function SignupPage() {
 
   useEffect(() => {
     if (!authLoading && user) {
-      router.replace(user.emailVerified ? '/onboarding' : '/verify-email');
+      router.replace(isEmailVerified ? '/onboarding' : '/verify-email');
     }
-  }, [authLoading, router, user]);
+  }, [authLoading, isEmailVerified, router, user]);
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -49,6 +49,7 @@ export default function SignupPage() {
     try {
       const credential = await createUserWithEmailAndPassword(auth, normalizeAuthIdentifier(email), password);
       await updateProfile(credential.user, { displayName: fullName.trim() });
+      await initializeUserProfile(credential.user, fullName.trim());
       try {
         await sendVerificationEmailViaServer(credential.user);
       } catch (sendError) {

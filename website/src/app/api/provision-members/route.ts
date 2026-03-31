@@ -80,6 +80,10 @@ async function createProvisionedAccount(churchId: string, provisioningId: string
         displayName: data.fullName,
         defaultChurchId: churchId,
         churchIds: FieldValue.arrayUnion(churchId),
+        emailVerification: {
+          status: 'verified',
+          verifiedAt: FieldValue.serverTimestamp(),
+        },
         mustChangePassword: true,
         updatedAt: FieldValue.serverTimestamp(),
         createdAt: FieldValue.serverTimestamp(),

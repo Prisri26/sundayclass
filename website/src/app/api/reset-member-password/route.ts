@@ -65,6 +65,10 @@ export async function POST(request: NextRequest) {
 
     await adminDb.doc(`users/${memberUserId}`).set(
       {
+        emailVerification: {
+          status: 'verified',
+          verifiedAt: FieldValue.serverTimestamp(),
+        },
         mustChangePassword: true,
         passwordResetAt: FieldValue.serverTimestamp(),
         updatedAt: FieldValue.serverTimestamp(),

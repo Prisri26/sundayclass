@@ -26,9 +26,10 @@ export default function VerifyEmailPage() {
   const { user, loading, isEmailVerified } = useAuth();
   const [sending, setSending] = useState(false);
   const [checking, setChecking] = useState(false);
-  const [openingLink, setOpeningLink] = useState(false);
   const [message, setMessage] = useState('Check your inbox, click the verification link, then return here to continue into your PrayLoom workspace setup.');
   const [error, setError] = useState('');
+  const [code, setCode] = useState('');
+  const [verifyingCode, setVerifyingCode] = useState(false);
   const redirectingRef = useRef(false);
 
   useEffect(() => {
@@ -50,43 +51,6 @@ export default function VerifyEmailPage() {
       void continueAfterVerification();
     }
   }, [isEmailVerified, loading, user]);
-
-  useEffect(() => {
-    if (loading || !user || isEmailVerified) return;
-
-    const interval = window.setInterval(async () => {
-      if (!auth.currentUser || redirectingRef.current) return;
-      try {
-        const refreshedUser = await getVerifiedUser();
-        if (refreshedUser?.emailVerified) {
-          setMessage('Email verified successfully. Redirecting you into setup...');
-          await continueAfterVerification(refreshedUser.uid);
-        }
-      } catch {
-        // Keep the screen calm. The manual button still works.
-      }
-    }, 3000);
-
-    return () => window.clearInterval(interval);
-  }, [isEmailVerified, loading, user]);
-
-  useEffect(() => {
-    const handleFocus = async () => {
-      if (!auth.currentUser) return;
-      try {
-        const refreshedUser = await getVerifiedUser();
-        if (refreshedUser?.emailVerified) {
-          setMessage('Email verified successfully. Redirecting you into setup...');
-          await continueAfterVerification(refreshedUser.uid);
-        }
-      } catch {
-        // Keep the page calm if focus-refresh fails; the manual button still works.
-      }
-    };
-
-    window.addEventListener('focus', handleFocus);
-    return () => window.removeEventListener('focus', handleFocus);
-  }, []);
 
   const continueAfterVerification = async (userIdOverride?: string) => {
     const resolvedUserId = userIdOverride || auth.currentUser?.uid || user?.uid;
@@ -129,12 +93,12 @@ export default function VerifyEmailPage() {
     setError('');
     try {
       const refreshedUser = await getVerifiedUser();
-      if (refreshedUser?.emailVerified) {
+      if (refreshedUser?.emailVerified || isEmailVerified) {
         setMessage('Email verified successfully. Redirecting...');
-        await continueAfterVerification(refreshedUser.uid);
+        await continueAfterVerification(refreshedUser?.uid || auth.currentUser?.uid || user?.uid);
         return;
       }
-      setMessage('Email is not verified yet. Make sure you opened the latest verification link for this same account, then return and try again.');
+      setMessage('Email is not verified yet. Enter the six-digit code from your PrayLoom email, or request a new code below.');
     } catch (nextError: any) {
       setError(mapFirebaseAuthError(nextError));
     } finally {
@@ -142,29 +106,38 @@ export default function VerifyEmailPage() {
     }
   };
 
-  const handleDirectVerificationLink = async () => {
+  const handleVerifyCode = async () => {
     if (!auth.currentUser) return;
-    setOpeningLink(true);
+    if (!code.trim()) {
+      setError('Enter the six-digit code from your email.');
+      return;
+    }
+    setVerifyingCode(true);
     setError('');
     try {
       const idToken = await auth.currentUser.getIdToken();
-      const response = await fetch('/api/verification-link', {
+      const response = await fetch('/api/verify-email-code', {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${idToken}`,
+          'Content-Type': 'application/json',
         },
+        body: JSON.stringify({ code: code.trim() }),
       });
 
       const payload = await response.json();
-      if (!response.ok || !payload?.link) {
-        throw new Error(payload?.error || 'Unable to generate a verification link.');
+      if (!response.ok) {
+        throw new Error(payload?.error || 'Unable to verify this code right now.');
       }
 
-      window.location.assign(payload.link);
+      await auth.currentUser.reload();
+      await auth.currentUser.getIdToken(true);
+      setMessage('Email verified successfully. Redirecting you into setup...');
+      await continueAfterVerification(auth.currentUser.uid);
     } catch (nextError: any) {
-      setError(nextError?.message || 'Unable to generate a direct verification link right now.');
+      setError(nextError?.message || 'Unable to verify the code right now.');
     } finally {
-      setOpeningLink(false);
+      setVerifyingCode(false);
     }
   };
 
@@ -255,17 +228,30 @@ export default function VerifyEmailPage() {
               </div>
 
               <div className="verify-panel-note">
-                <strong>Testing shortcut:</strong> If the verification email does not arrive within a few seconds, use the direct link below. It still verifies the same Firebase account, but without waiting for inbox delivery.
+                <strong>Enter code:</strong> We now send a six-digit PrayLoom verification code by email. Paste it below to confirm this admin account and continue setup.
               </div>
 
               {error ? <div className="login-panel-error">{error}</div> : null}
+
+              <div className="signup-panel-field">
+                <label className="signup-panel-label">Verification Code</label>
+                <input
+                  type="text"
+                  className="signup-panel-input"
+                  value={code}
+                  onChange={(e) => setCode(e.target.value.replace(/\D+/g, '').slice(0, 6))}
+                  placeholder="123456"
+                  inputMode="numeric"
+                  maxLength={6}
+                />
+              </div>
 
               <button type="button" className="login-panel-submit" onClick={handleRefresh} disabled={checking}>
                 {checking ? 'Checking...' : 'I have verified my email'}
               </button>
 
-              <button type="button" className="verify-panel-submit is-secondary" onClick={handleDirectVerificationLink} disabled={openingLink}>
-                {openingLink ? 'Opening link...' : 'Open verification link for testing'}
+              <button type="button" className="verify-panel-submit is-secondary" onClick={handleVerifyCode} disabled={verifyingCode}>
+                {verifyingCode ? 'Verifying code...' : 'Verify code'}
               </button>
 
               {ALLOW_UNVERIFIED_ONBOARDING ? (
@@ -287,7 +273,7 @@ export default function VerifyEmailPage() {
               </button>
 
               <div className="login-panel-helper">
-                Tip: if email delivery is delayed while testing, use the direct verification link option and then return here. PrayLoom will check again when the page regains focus.
+                Tip: admins verify through PrayLoom email codes now. Teachers provisioned by your church admin are marked verified automatically and go straight to password setup.
               </div>
             </div>
 
