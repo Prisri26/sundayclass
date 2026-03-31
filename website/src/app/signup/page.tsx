@@ -7,7 +7,7 @@ import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
 import { auth } from '../../lib/firebase';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../context/AuthContext';
-import { mapFirebaseAuthError, normalizeAuthIdentifier, sendVerificationEmailViaServer, validateSignupPassword } from '../../lib/auth';
+import { VerificationEmailRateLimitError, mapFirebaseAuthError, normalizeAuthIdentifier, sendVerificationEmailViaServer, validateSignupPassword } from '../../lib/auth';
 
 export default function SignupPage() {
   const router = useRouter();
@@ -49,7 +49,15 @@ export default function SignupPage() {
     try {
       const credential = await createUserWithEmailAndPassword(auth, normalizeAuthIdentifier(email), password);
       await updateProfile(credential.user, { displayName: fullName.trim() });
-      await sendVerificationEmailViaServer(credential.user);
+      try {
+        await sendVerificationEmailViaServer(credential.user);
+      } catch (sendError) {
+        if (sendError instanceof VerificationEmailRateLimitError) {
+          router.push('/verify-email?send=rate_limited');
+          return;
+        }
+        throw sendError;
+      }
       router.push('/verify-email');
     } catch (err: any) {
       setError(mapFirebaseAuthError(err));

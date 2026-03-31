@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from 'react';
 import { signOut } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import { useAuth } from '../../context/AuthContext';
 import { auth, db } from '../../lib/firebase';
 import { ALLOW_UNVERIFIED_ONBOARDING } from '../../context/AuthContext';
@@ -21,6 +22,7 @@ async function getVerifiedUser() {
 
 export default function VerifyEmailPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { user, loading, isEmailVerified } = useAuth();
   const [sending, setSending] = useState(false);
   const [checking, setChecking] = useState(false);
@@ -28,6 +30,14 @@ export default function VerifyEmailPage() {
   const [message, setMessage] = useState('Check your inbox, click the verification link, then return here to continue into your PrayLoom workspace setup.');
   const [error, setError] = useState('');
   const redirectingRef = useRef(false);
+
+  useEffect(() => {
+    const sendState = searchParams.get('send');
+    if (sendState === 'rate_limited') {
+      setMessage('Your account was created, but Firebase is temporarily rate-limiting verification email generation for this account. Wait a while before resending, or continue testing with the temporary onboarding bypass.');
+      setError('');
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -105,6 +115,9 @@ export default function VerifyEmailPage() {
       setMessage('Verification email sent again. Please check your inbox and spam folder.');
     } catch (nextError: any) {
       setError(mapFirebaseAuthError(nextError));
+      if (String(nextError?.message || '').includes('rate-limiting verification')) {
+        setMessage('Firebase is currently rate-limiting verification emails for this account. Please wait before sending again, or continue testing with the temporary onboarding bypass.');
+      }
     } finally {
       setSending(false);
     }

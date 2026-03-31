@@ -3,6 +3,13 @@ import { doc, getDoc } from 'firebase/firestore';
 import { auth } from './firebase';
 import { db } from './firebase';
 
+export class VerificationEmailRateLimitError extends Error {
+  constructor(message = 'Verification email is temporarily rate-limited. Please wait before trying again.') {
+    super(message);
+    this.name = 'VerificationEmailRateLimitError';
+  }
+}
+
 export function normalizeAuthIdentifier(value: string) {
   return value.trim().toLowerCase();
 }
@@ -24,6 +31,10 @@ export function validateSignupPassword(password: string) {
 }
 
 export function mapFirebaseAuthError(error: any) {
+  if (error instanceof VerificationEmailRateLimitError) {
+    return error.message;
+  }
+
   const code = error?.code || '';
 
   switch (code) {
@@ -60,7 +71,13 @@ export async function sendVerificationEmailViaServer(user: User) {
 
   const payload = await response.json().catch(() => null);
   if (!response.ok) {
-    throw new Error(payload?.error || 'Unable to send verification email right now.');
+    const message = payload?.error || 'Unable to send verification email right now.';
+    if (String(message).includes('TOO_MANY_ATTEMPTS_TRY_LATER')) {
+      throw new VerificationEmailRateLimitError(
+        'Firebase is temporarily rate-limiting verification for this account. You can continue to the verify step and use the testing link or wait a while before sending again.',
+      );
+    }
+    throw new Error(message);
   }
 
   return payload;
