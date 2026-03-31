@@ -24,8 +24,16 @@ function hashCode(code: string) {
   return crypto.createHash('sha256').update(code).digest('hex');
 }
 
-function buildVerificationEmailHtml(params: { fullName?: string | null; code: string }) {
-  const { fullName, code } = params;
+function generateLinkToken() {
+  return crypto.randomBytes(32).toString('hex');
+}
+
+function getAppUrl() {
+  return (process.env.NEXT_PUBLIC_APP_URL?.trim() || 'http://localhost:3000').replace(/\/$/, '');
+}
+
+function buildVerificationEmailHtml(params: { fullName?: string | null; code: string; verificationUrl: string }) {
+  const { fullName, code, verificationUrl } = params;
   const greeting = fullName?.trim() ? `Hello ${fullName.trim()},` : 'Hello,';
 
   return `
@@ -38,8 +46,14 @@ function buildVerificationEmailHtml(params: { fullName?: string | null; code: st
         </div>
         <div style="padding:32px;">
           <p style="margin:0 0 18px;font-size:17px;line-height:1.7;color:#3b4166;">${greeting}</p>
-          <p style="margin:0 0 24px;font-size:17px;line-height:1.7;color:#3b4166;">
-            Enter this verification code in PrayLoom:
+          <p style="margin:0 0 20px;font-size:17px;line-height:1.7;color:#3b4166;">
+            Confirm this admin account with one click, then continue into your workspace setup.
+          </p>
+          <a href="${verificationUrl}" style="display:inline-block;padding:16px 24px;border-radius:18px;background:#392cc1;color:#ffffff;font-size:17px;font-weight:700;text-decoration:none;box-shadow:0 18px 40px rgba(57,44,193,0.22);">
+            Verify email and continue
+          </a>
+          <p style="margin:20px 0 18px;font-size:15px;line-height:1.7;color:#62698f;">
+            If the button opens on another device, you can still enter this backup code in PrayLoom:
           </p>
           <div style="display:inline-block;padding:18px 24px;border-radius:20px;background:#f5f7ff;border:1px solid #dfe6ff;font-size:32px;letter-spacing:0.32em;font-weight:800;color:#20254b;">
             ${code}
@@ -54,12 +68,16 @@ function buildVerificationEmailHtml(params: { fullName?: string | null; code: st
   `;
 }
 
-function buildVerificationEmailText(params: { fullName?: string | null; code: string }) {
-  const { fullName, code } = params;
+function buildVerificationEmailText(params: { fullName?: string | null; code: string; verificationUrl: string }) {
+  const { fullName, code, verificationUrl } = params;
   const greeting = fullName?.trim() ? `Hello ${fullName.trim()},` : 'Hello,';
   return `${greeting}
 
-Use this PrayLoom verification code to continue onboarding:
+Click this PrayLoom verification link to continue onboarding:
+
+${verificationUrl}
+
+Backup verification code:
 
 ${code}
 
@@ -75,7 +93,10 @@ export async function sendVerificationEmailCode(params: {
   const { apiKey, from, replyTo } = getResendConfig();
   const code = generateVerificationCode();
   const codeHash = hashCode(code);
+  const linkToken = generateLinkToken();
+  const linkTokenHash = hashCode(linkToken);
   const expiresAt = Timestamp.fromDate(new Date(Date.now() + 20 * 60 * 1000));
+  const verificationUrl = `${getAppUrl()}/verify-email?token=${encodeURIComponent(linkToken)}`;
 
   await adminDb.doc(`users/${uid}`).set(
     {
@@ -84,6 +105,7 @@ export async function sendVerificationEmailCode(params: {
       emailVerification: {
         status: 'pending',
         codeHash,
+        linkTokenHash,
         attempts: 0,
         expiresAt,
         sentAt: FieldValue.serverTimestamp(),
@@ -104,9 +126,9 @@ export async function sendVerificationEmailCode(params: {
       from,
       to: [email],
       reply_to: replyTo ? [replyTo] : undefined,
-      subject: 'Your PrayLoom verification code',
-      html: buildVerificationEmailHtml({ fullName, code }),
-      text: buildVerificationEmailText({ fullName, code }),
+      subject: 'Verify your PrayLoom admin account',
+      html: buildVerificationEmailHtml({ fullName, code, verificationUrl }),
+      text: buildVerificationEmailText({ fullName, code, verificationUrl }),
     }),
   });
 
@@ -121,21 +143,23 @@ export async function sendVerificationEmailCode(params: {
   };
 }
 
-export async function verifyVerificationCode(params: { uid: string; code: string }) {
-  const userRef = adminDb.doc(`users/${params.uid}`);
+type StoredVerification = {
+  status?: string;
+  codeHash?: string;
+  attempts?: number;
+  expiresAt?: Timestamp;
+  sentAt?: Timestamp;
+  linkTokenHash?: string;
+};
+
+async function getPendingVerification(userRef: FirebaseFirestore.DocumentReference) {
   const snap = await userRef.get();
   if (!snap.exists) {
     throw new Error('User profile not found.');
   }
 
   const data = snap.data() as {
-    emailVerification?: {
-      status?: string;
-      codeHash?: string;
-      attempts?: number;
-      expiresAt?: Timestamp;
-      sentAt?: Timestamp;
-    };
+    emailVerification?: StoredVerification;
   };
 
   const verification = data.emailVerification;
@@ -143,11 +167,41 @@ export async function verifyVerificationCode(params: { uid: string; code: string
     throw new Error('No active verification code found. Request a new code and try again.');
   }
 
+  return { userRef, verification };
+}
+
+async function markVerified(userRef: FirebaseFirestore.DocumentReference, verification: StoredVerification) {
+  await userRef.set(
+    {
+      emailVerification: {
+        status: 'verified',
+        verifiedAt: FieldValue.serverTimestamp(),
+        sentAt: verification.sentAt || FieldValue.serverTimestamp(),
+        expiresAt: FieldValue.delete(),
+        codeHash: FieldValue.delete(),
+        linkTokenHash: FieldValue.delete(),
+        attempts: FieldValue.delete(),
+      },
+      updatedAt: FieldValue.serverTimestamp(),
+    },
+    { merge: true },
+  );
+}
+
+export async function verifyVerificationCode(params: { uid: string; code: string }) {
+  const userRef = adminDb.doc(`users/${params.uid}`);
+  const { verification } = await getPendingVerification(userRef);
+
   if (verification.status === 'verified') {
     return { alreadyVerified: true };
   }
 
-  if (verification.expiresAt.toDate().getTime() < Date.now()) {
+  const expiresAt = verification.expiresAt;
+  if (!expiresAt) {
+    throw new Error('This verification code is no longer active. Request a new code and try again.');
+  }
+
+  if (expiresAt.toDate().getTime() < Date.now()) {
     throw new Error('This verification code has expired. Request a new code and try again.');
   }
 
@@ -171,20 +225,43 @@ export async function verifyVerificationCode(params: { uid: string; code: string
     throw new Error('That code is not valid. Check the email and try again.');
   }
 
-  await userRef.set(
-    {
-      emailVerification: {
-        status: 'verified',
-        verifiedAt: FieldValue.serverTimestamp(),
-        sentAt: verification.sentAt || FieldValue.serverTimestamp(),
-        expiresAt: FieldValue.delete(),
-        codeHash: FieldValue.delete(),
-        attempts: FieldValue.delete(),
-      },
-      updatedAt: FieldValue.serverTimestamp(),
-    },
-    { merge: true },
-  );
+  await markVerified(userRef, verification);
 
   return { alreadyVerified: false };
+}
+
+export async function verifyVerificationLinkToken(token: string) {
+  const tokenHash = hashCode(token.trim());
+  const snap = await adminDb
+    .collection('users')
+    .where('emailVerification.linkTokenHash', '==', tokenHash)
+    .limit(1)
+    .get();
+
+  if (snap.empty) {
+    throw new Error('This verification link is not valid anymore. Request a new verification email and try again.');
+  }
+
+  const userRef = snap.docs[0].ref;
+  const { verification } = await getPendingVerification(userRef);
+
+  if (verification.status === 'verified') {
+    return { alreadyVerified: true, uid: snap.docs[0].id };
+  }
+
+  const expiresAt = verification.expiresAt;
+  if (!expiresAt) {
+    throw new Error('This verification link is no longer active. Request a new verification email and try again.');
+  }
+
+  if (expiresAt.toDate().getTime() < Date.now()) {
+    throw new Error('This verification link has expired. Request a new verification email and try again.');
+  }
+
+  if (!verification.linkTokenHash || verification.linkTokenHash !== tokenHash) {
+    throw new Error('This verification link is not valid anymore. Request a new verification email and try again.');
+  }
+
+  await markVerified(userRef, verification);
+  return { alreadyVerified: false, uid: snap.docs[0].id };
 }

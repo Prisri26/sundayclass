@@ -24,13 +24,17 @@ function VerifyEmailContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user, loading, isEmailVerified } = useAuth();
+  const token = searchParams.get('token') || '';
   const [sending, setSending] = useState(false);
   const [checking, setChecking] = useState(false);
-  const [message, setMessage] = useState('Check your inbox, click the verification link, then return here to continue into your PrayLoom workspace setup.');
+  const [message, setMessage] = useState('Check your inbox and use the PrayLoom verification link to continue into your workspace setup.');
   const [error, setError] = useState('');
   const [code, setCode] = useState('');
   const [verifyingCode, setVerifyingCode] = useState(false);
+  const [verifyingLink, setVerifyingLink] = useState(false);
+  const [linkVerified, setLinkVerified] = useState(false);
   const redirectingRef = useRef(false);
+  const tokenProcessedRef = useRef(false);
 
   useEffect(() => {
     const sendState = searchParams.get('send');
@@ -41,16 +45,22 @@ function VerifyEmailContent() {
   }, [searchParams]);
 
   useEffect(() => {
-    if (!loading && !user) {
+    if (!loading && !user && !token) {
       router.replace('/login');
     }
-  }, [loading, router, user]);
+  }, [loading, router, token, user]);
 
   useEffect(() => {
     if (!loading && user && isEmailVerified) {
       void continueAfterVerification();
     }
   }, [isEmailVerified, loading, user]);
+
+  useEffect(() => {
+    if (!token || tokenProcessedRef.current) return;
+    tokenProcessedRef.current = true;
+    void handleVerifyLink(token);
+  }, [token]);
 
   const continueAfterVerification = async (userIdOverride?: string) => {
     const resolvedUserId = userIdOverride || auth.currentUser?.uid || user?.uid;
@@ -88,6 +98,11 @@ function VerifyEmailContent() {
   };
 
   const handleRefresh = async () => {
+    if (linkVerified) {
+      await continueAfterVerification();
+      return;
+    }
+
     if (!auth.currentUser) return;
     setChecking(true);
     setError('');
@@ -98,11 +113,44 @@ function VerifyEmailContent() {
         await continueAfterVerification(refreshedUser?.uid || auth.currentUser?.uid || user?.uid);
         return;
       }
-      setMessage('Email is not verified yet. Enter the six-digit code from your PrayLoom email, or request a new code below.');
+      setMessage('Email is not verified yet. Open the PrayLoom verification link from your inbox, or use the backup code below.');
     } catch (nextError: any) {
       setError(mapFirebaseAuthError(nextError));
     } finally {
       setChecking(false);
+    }
+  };
+
+  const handleVerifyLink = async (linkToken: string) => {
+    setVerifyingLink(true);
+    setError('');
+    try {
+      const response = await fetch('/api/verify-email-link', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ token: linkToken }),
+      });
+
+      const payload = await response.json();
+      if (!response.ok) {
+        throw new Error(payload?.error || 'Unable to verify this email link right now.');
+      }
+
+      setLinkVerified(true);
+      setMessage('Your PrayLoom email link is verified. Continue into your workspace setup.');
+
+      if (auth.currentUser) {
+        await auth.currentUser.reload();
+        await auth.currentUser.getIdToken(true);
+        await continueAfterVerification(auth.currentUser.uid);
+      }
+    } catch (nextError: any) {
+      setError(nextError?.message || 'Unable to verify this email link right now.');
+      setMessage('This link could not be completed automatically. You can request a fresh email or use the backup code below.');
+    } finally {
+      setVerifyingLink(false);
     }
   };
 
@@ -148,7 +196,7 @@ function VerifyEmailContent() {
     window.location.assign('/onboarding/plan');
   };
 
-  if (loading || !user) {
+  if (loading || (!user && !token)) {
     return <div className="loading-page"><div className="spinner" /></div>;
   }
 
@@ -218,7 +266,11 @@ function VerifyEmailContent() {
             <div className="login-panel-intro">
               <h1 className="login-panel-title">Confirm your account.</h1>
               <p className="login-panel-copy">
-                We sent a verification email to <strong>{user.email}</strong>. Open the link in your inbox, then return here to continue to subscription and church setup.
+                {user?.email ? (
+                  <>We sent a verification email to <strong>{user.email}</strong>. Open the PrayLoom link in your inbox to continue into subscription and church setup.</>
+                ) : (
+                  <>Use the PrayLoom link from your inbox to finish verification, then sign in and continue setup.</>
+                )}
               </p>
             </div>
 
@@ -228,13 +280,19 @@ function VerifyEmailContent() {
               </div>
 
               <div className="verify-panel-note">
-                <strong>Enter code:</strong> We now send a six-digit PrayLoom verification code by email. Paste it below to confirm this admin account and continue setup.
+                <strong>Recommended:</strong> click the email link first. The backup code below is only for cases where you opened the email on another device and need to finish verification manually.
               </div>
 
               {error ? <div className="login-panel-error">{error}</div> : null}
 
+              {token ? (
+                <button type="button" className="login-panel-submit" onClick={() => void handleVerifyLink(token)} disabled={verifyingLink}>
+                  {verifyingLink ? 'Verifying email link...' : 'Verify this email link'}
+                </button>
+              ) : null}
+
               <div className="signup-panel-field">
-                <label className="signup-panel-label">Verification Code</label>
+                <label className="signup-panel-label">Backup Verification Code</label>
                 <input
                   type="text"
                   className="signup-panel-input"
@@ -247,14 +305,14 @@ function VerifyEmailContent() {
               </div>
 
               <button type="button" className="login-panel-submit" onClick={handleRefresh} disabled={checking}>
-                {checking ? 'Checking...' : 'I have verified my email'}
+                {checking ? 'Checking...' : 'Continue to setup'}
               </button>
 
               <button type="button" className="verify-panel-submit is-secondary" onClick={handleVerifyCode} disabled={verifyingCode}>
-                {verifyingCode ? 'Verifying code...' : 'Verify code'}
+                {verifyingCode ? 'Verifying code...' : 'Use backup code'}
               </button>
 
-              {ALLOW_UNVERIFIED_ONBOARDING ? (
+              {ALLOW_UNVERIFIED_ONBOARDING && user ? (
                 <button
                   type="button"
                   className="verify-panel-submit is-secondary is-warning"
@@ -264,16 +322,24 @@ function VerifyEmailContent() {
                 </button>
               ) : null}
 
-              <button type="button" className="verify-panel-submit is-secondary" onClick={handleResend} disabled={sending}>
+              <button type="button" className="verify-panel-submit is-secondary" onClick={handleResend} disabled={sending || !user}>
                 {sending ? 'Sending...' : 'Resend verification email'}
               </button>
 
-              <button type="button" className="verify-panel-submit is-ghost" onClick={() => signOut(auth)}>
-                Sign out
-              </button>
+              {user ? (
+                <button type="button" className="verify-panel-submit is-ghost" onClick={() => signOut(auth)}>
+                  Sign out
+                </button>
+              ) : null}
+
+              {!user && linkVerified ? (
+                <Link href="/login" className="verify-panel-submit is-ghost">
+                  Return to sign in
+                </Link>
+              ) : null}
 
               <div className="login-panel-helper">
-                Tip: admins verify through PrayLoom email codes now. Teachers provisioned by your church admin are marked verified automatically and go straight to password setup.
+                Tip: the email link is now the primary verification path. The backup code is there only if you opened the inbox on another device or the link cannot complete automatically.
               </div>
             </div>
 
