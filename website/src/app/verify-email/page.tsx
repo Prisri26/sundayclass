@@ -2,7 +2,7 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
-import { useEffect, useRef, useState } from 'react';
+import { Suspense, useEffect, useRef, useState } from 'react';
 import { signOut } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
@@ -20,7 +20,7 @@ async function getVerifiedUser() {
   return auth.currentUser;
 }
 
-export default function VerifyEmailPage() {
+function VerifyEmailContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user, loading, isEmailVerified } = useAuth();
@@ -287,5 +287,13 @@ export default function VerifyEmailPage() {
         </section>
       </main>
     </div>
+  );
+}
+
+export default function VerifyEmailPage() {
+  return (
+    <Suspense fallback={<div className="loading-page"><div className="spinner" /></div>}>
+      <VerifyEmailContent />
+    </Suspense>
   );
 }
