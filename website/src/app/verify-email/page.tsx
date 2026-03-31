@@ -9,7 +9,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '../../context/AuthContext';
 import { auth, db } from '../../lib/firebase';
 import { ALLOW_UNVERIFIED_ONBOARDING } from '../../context/AuthContext';
-import { mapFirebaseAuthError, sendVerificationEmailWithFallback } from '../../lib/auth';
+import { mapFirebaseAuthError, sendVerificationEmailViaServer } from '../../lib/auth';
 
 async function getVerifiedUser() {
   const current = auth.currentUser;
@@ -101,12 +101,8 @@ export default function VerifyEmailPage() {
     setSending(true);
     setError('');
     try {
-      const result = await sendVerificationEmailWithFallback(current, window.location.origin);
-      setMessage(
-        result.mode === 'firebase_default'
-          ? 'Verification email sent using Firebase default flow. Please check your inbox, open the link, then return here and continue.'
-          : 'Verification email sent again. Please check your inbox and spam folder.',
-      );
+      await sendVerificationEmailViaServer(current);
+      setMessage('Verification email sent again. Please check your inbox and spam folder.');
     } catch (nextError: any) {
       setError(mapFirebaseAuthError(nextError));
     } finally {

@@ -1,5 +1,6 @@
-import { sendEmailVerification, type ActionCodeSettings, type User } from 'firebase/auth';
+import type { User } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
+import { auth } from './firebase';
 import { db } from './firebase';
 
 export function normalizeAuthIdentifier(value: string) {
@@ -47,29 +48,22 @@ export function mapFirebaseAuthError(error: any) {
   }
 }
 
-export function getEmailVerificationActionSettings(origin?: string): ActionCodeSettings {
-  const envBaseUrl = process.env.NEXT_PUBLIC_APP_URL?.trim() || '';
-  const browserOrigin = typeof window !== 'undefined' ? window.location.origin : '';
-  const baseUrl = envBaseUrl || origin || browserOrigin;
+export async function sendVerificationEmailViaServer(user: User) {
+  const currentUser = auth.currentUser || user;
+  const idToken = await currentUser.getIdToken(true);
+  const response = await fetch('/api/send-verification-email', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${idToken}`,
+    },
+  });
 
-  return {
-    url: `${baseUrl}/verify-email/action`,
-    handleCodeInApp: true,
-  };
-}
-
-export async function sendVerificationEmailWithFallback(user: User, origin?: string) {
-  try {
-    await sendEmailVerification(user, getEmailVerificationActionSettings(origin));
-    return { mode: 'custom' as const };
-  } catch (error: any) {
-    const code = error?.code || '';
-    if (code === 'auth/unauthorized-continue-uri' || code === 'auth/invalid-continue-uri') {
-      await sendEmailVerification(user);
-      return { mode: 'firebase_default' as const };
-    }
-    throw error;
+  const payload = await response.json().catch(() => null);
+  if (!response.ok) {
+    throw new Error(payload?.error || 'Unable to send verification email right now.');
   }
+
+  return payload;
 }
 
 export async function getUserSecurityState(userId: string) {
