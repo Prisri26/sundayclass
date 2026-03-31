@@ -29,8 +29,6 @@ function VerifyEmailContent() {
   const [checking, setChecking] = useState(false);
   const [message, setMessage] = useState('Check your inbox and use the PrayLoom verification link to continue into your workspace setup.');
   const [error, setError] = useState('');
-  const [code, setCode] = useState('');
-  const [verifyingCode, setVerifyingCode] = useState(false);
   const [verifyingLink, setVerifyingLink] = useState(false);
   const [linkVerified, setLinkVerified] = useState(false);
   const redirectingRef = useRef(false);
@@ -113,7 +111,7 @@ function VerifyEmailContent() {
         await continueAfterVerification(refreshedUser?.uid || auth.currentUser?.uid || user?.uid);
         return;
       }
-      setMessage('Email is not verified yet. Open the PrayLoom verification link from your inbox, or use the backup code below.');
+      setMessage('Email is not verified yet. Open the PrayLoom verification link from your inbox, then return here.');
     } catch (nextError: any) {
       setError(mapFirebaseAuthError(nextError));
     } finally {
@@ -148,44 +146,9 @@ function VerifyEmailContent() {
       }
     } catch (nextError: any) {
       setError(nextError?.message || 'Unable to verify this email link right now.');
-      setMessage('This link could not be completed automatically. You can request a fresh email or use the backup code below.');
+      setMessage('This link could not be completed automatically. Request a fresh email below and try again.');
     } finally {
       setVerifyingLink(false);
-    }
-  };
-
-  const handleVerifyCode = async () => {
-    if (!auth.currentUser) return;
-    if (!code.trim()) {
-      setError('Enter the six-digit code from your email.');
-      return;
-    }
-    setVerifyingCode(true);
-    setError('');
-    try {
-      const idToken = await auth.currentUser.getIdToken();
-      const response = await fetch('/api/verify-email-code', {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${idToken}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ code: code.trim() }),
-      });
-
-      const payload = await response.json();
-      if (!response.ok) {
-        throw new Error(payload?.error || 'Unable to verify this code right now.');
-      }
-
-      await auth.currentUser.reload();
-      await auth.currentUser.getIdToken(true);
-      setMessage('Email verified successfully. Redirecting you into setup...');
-      await continueAfterVerification(auth.currentUser.uid);
-    } catch (nextError: any) {
-      setError(nextError?.message || 'Unable to verify the code right now.');
-    } finally {
-      setVerifyingCode(false);
     }
   };
 
@@ -280,7 +243,7 @@ function VerifyEmailContent() {
               </div>
 
               <div className="verify-panel-note">
-                <strong>Recommended:</strong> click the email link first. The backup code below is only for cases where you opened the email on another device and need to finish verification manually.
+                <strong>Recommended:</strong> use the PrayLoom email link. This is the same link-based flow most modern products use because it keeps verification fast and clean.
               </div>
 
               {error ? <div className="login-panel-error">{error}</div> : null}
@@ -291,25 +254,8 @@ function VerifyEmailContent() {
                 </button>
               ) : null}
 
-              <div className="signup-panel-field">
-                <label className="signup-panel-label">Backup Verification Code</label>
-                <input
-                  type="text"
-                  className="signup-panel-input"
-                  value={code}
-                  onChange={(e) => setCode(e.target.value.replace(/\D+/g, '').slice(0, 6))}
-                  placeholder="123456"
-                  inputMode="numeric"
-                  maxLength={6}
-                />
-              </div>
-
               <button type="button" className="login-panel-submit" onClick={handleRefresh} disabled={checking}>
-                {checking ? 'Checking...' : 'Continue to setup'}
-              </button>
-
-              <button type="button" className="verify-panel-submit is-secondary" onClick={handleVerifyCode} disabled={verifyingCode}>
-                {verifyingCode ? 'Verifying code...' : 'Use backup code'}
+                {checking ? 'Checking...' : 'I have opened the email link'}
               </button>
 
               {ALLOW_UNVERIFIED_ONBOARDING && user ? (
@@ -339,7 +285,7 @@ function VerifyEmailContent() {
               ) : null}
 
               <div className="login-panel-helper">
-                Tip: the email link is now the primary verification path. The backup code is there only if you opened the inbox on another device or the link cannot complete automatically.
+                Tip: click the PrayLoom link in your email first. If nothing arrives, use resend once and wait for the new message before trying again.
               </div>
             </div>
 

@@ -32,8 +32,8 @@ function getAppUrl() {
   return (process.env.NEXT_PUBLIC_APP_URL?.trim() || 'http://localhost:3000').replace(/\/$/, '');
 }
 
-function buildVerificationEmailHtml(params: { fullName?: string | null; code: string; verificationUrl: string }) {
-  const { fullName, code, verificationUrl } = params;
+function buildVerificationEmailHtml(params: { fullName?: string | null; verificationUrl: string }) {
+  const { fullName, verificationUrl } = params;
   const greeting = fullName?.trim() ? `Hello ${fullName.trim()},` : 'Hello,';
 
   return `
@@ -52,15 +52,9 @@ function buildVerificationEmailHtml(params: { fullName?: string | null; code: st
           <a href="${verificationUrl}" style="display:inline-block;padding:16px 24px;border-radius:18px;background:#392cc1;color:#ffffff;font-size:17px;font-weight:700;text-decoration:none;box-shadow:0 18px 40px rgba(57,44,193,0.22);">
             Verify email and continue
           </a>
-          <p style="margin:20px 0 18px;font-size:15px;line-height:1.7;color:#62698f;">
-            If the button opens on another device, you can still enter this backup code in PrayLoom:
-          </p>
-          <div style="display:inline-block;padding:18px 24px;border-radius:20px;background:#f5f7ff;border:1px solid #dfe6ff;font-size:32px;letter-spacing:0.32em;font-weight:800;color:#20254b;">
-            ${code}
-          </div>
           <div style="margin-top:28px;padding:18px 20px;background:#f7f8ff;border:1px solid #e4e9ff;border-radius:20px;">
             <div style="font-size:12px;letter-spacing:0.22em;text-transform:uppercase;font-weight:700;color:#8d90af;margin-bottom:10px;">Expires soon</div>
-            <p style="margin:0;font-size:15px;line-height:1.7;color:#62698f;">This code expires in 20 minutes. If you didn’t request this, you can ignore the email.</p>
+            <p style="margin:0;font-size:15px;line-height:1.7;color:#62698f;">This verification link expires in 20 minutes. If you didn’t request this, you can ignore the email.</p>
           </div>
         </div>
       </div>
@@ -68,8 +62,8 @@ function buildVerificationEmailHtml(params: { fullName?: string | null; code: st
   `;
 }
 
-function buildVerificationEmailText(params: { fullName?: string | null; code: string; verificationUrl: string }) {
-  const { fullName, code, verificationUrl } = params;
+function buildVerificationEmailText(params: { fullName?: string | null; verificationUrl: string }) {
+  const { fullName, verificationUrl } = params;
   const greeting = fullName?.trim() ? `Hello ${fullName.trim()},` : 'Hello,';
   return `${greeting}
 
@@ -77,11 +71,7 @@ Click this PrayLoom verification link to continue onboarding:
 
 ${verificationUrl}
 
-Backup verification code:
-
-${code}
-
-This code expires in 20 minutes.`;
+This verification link expires in 20 minutes.`;
 }
 
 export async function sendVerificationEmailCode(params: {
@@ -127,8 +117,8 @@ export async function sendVerificationEmailCode(params: {
       to: [email],
       reply_to: replyTo ? [replyTo] : undefined,
       subject: 'Verify your PrayLoom admin account',
-      html: buildVerificationEmailHtml({ fullName, code, verificationUrl }),
-      text: buildVerificationEmailText({ fullName, code, verificationUrl }),
+      html: buildVerificationEmailHtml({ fullName, verificationUrl }),
+      text: buildVerificationEmailText({ fullName, verificationUrl }),
     }),
   });
 
