@@ -21,7 +21,7 @@ export default function SignupPage() {
 
   useEffect(() => {
     if (!authLoading && user) {
-      router.replace('/onboarding');
+      router.replace(user.emailVerified ? '/onboarding' : '/verify-email');
     }
   }, [authLoading, router, user]);
 
