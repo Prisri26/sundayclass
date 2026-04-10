@@ -3,13 +3,11 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { Suspense, useEffect, useRef, useState } from 'react';
-import { signOut } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
 import { useSearchParams } from 'next/navigation';
 import { useAuth } from '../../context/AuthContext';
 import { auth, db } from '../../lib/firebase';
-import { ALLOW_UNVERIFIED_ONBOARDING } from '../../context/AuthContext';
 import { mapFirebaseAuthError, sendVerificationEmailViaServer } from '../../lib/auth';
 
 async function getVerifiedUser() {
@@ -37,7 +35,7 @@ function VerifyEmailContent() {
   useEffect(() => {
     const sendState = searchParams.get('send');
     if (sendState === 'rate_limited') {
-      setMessage('Your account was created, but Firebase is temporarily rate-limiting verification email generation for this account. Wait a while before resending, or continue testing with the temporary onboarding bypass.');
+      setMessage('Your account was created, but email sending is temporarily rate-limited for this account. Wait a while before resending and try again.');
       setError('');
     }
   }, [searchParams]);
@@ -88,7 +86,7 @@ function VerifyEmailContent() {
     } catch (nextError: any) {
       setError(mapFirebaseAuthError(nextError));
       if (String(nextError?.message || '').includes('rate-limiting verification')) {
-        setMessage('Firebase is currently rate-limiting verification emails for this account. Please wait before sending again, or continue testing with the temporary onboarding bypass.');
+        setMessage('Verification email sending is temporarily rate-limited for this account. Please wait before sending again.');
       }
     } finally {
       setSending(false);
@@ -152,13 +150,6 @@ function VerifyEmailContent() {
     }
   };
 
-  const handleContinueForNow = () => {
-    setError('');
-    setMessage('Continuing into setup without email verification for now. Finish workspace setup, then return to verify this admin account later.');
-    router.replace('/onboarding/plan');
-    window.location.assign('/onboarding/plan');
-  };
-
   if (loading || (!user && !token)) {
     return <div className="loading-page"><div className="spinner" /></div>;
   }
@@ -207,35 +198,13 @@ function VerifyEmailContent() {
 
             {error ? <div className="login-panel-error">{error}</div> : null}
 
-            {token ? (
-              <button type="button" className="verify-center-primary" onClick={() => void handleVerifyLink(token)} disabled={verifyingLink}>
-                {verifyingLink ? 'Verifying email link...' : 'Verify this email link'}
-              </button>
-            ) : null}
-
             <button type="button" className="verify-center-primary" onClick={handleRefresh} disabled={checking}>
-              {checking ? 'Checking...' : 'I have opened the email link'}
+              {verifyingLink ? 'Verifying email link...' : checking ? 'Checking...' : 'I have opened the email link'}
             </button>
-
-            {ALLOW_UNVERIFIED_ONBOARDING && user ? (
-              <button
-                type="button"
-                className="verify-center-secondary verify-center-secondary-warm"
-                onClick={handleContinueForNow}
-              >
-                Continue setup without verification for now
-              </button>
-            ) : null}
 
             <button type="button" className="verify-center-secondary" onClick={handleResend} disabled={sending || !user}>
               {sending ? 'Sending...' : 'Resend verification email'}
             </button>
-
-            {user ? (
-              <button type="button" className="verify-center-link" onClick={() => signOut(auth)}>
-                Sign out
-              </button>
-            ) : null}
 
             {!user && linkVerified ? (
               <Link href="/login" className="verify-center-link">
