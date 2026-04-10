@@ -177,118 +177,73 @@ function VerifyEmailContent() {
         </div>
       </header>
 
-      <main className="auth-stage">
-        <section className="login-story verify-story">
-          <div className="verify-stage-label">Email checkpoint</div>
-          <div className="login-story-copyblock verify-copyblock">
-            <h1 className="login-story-title verify-story-title">
-              Open the link in your inbox.
-            </h1>
-            <p className="login-story-copy verify-story-copy">
-              We keep this step simple. Verify the founding admin email, then PrayLoom will move straight into workspace setup.
+      <main className="verify-center-stage">
+        <section className="verify-center-shell">
+          <div className="verify-center-hero">
+            <div className="verify-center-icon" aria-hidden="true">✉</div>
+            <h1 className="verify-center-title">Confirm your account</h1>
+            <p className="verify-center-subtitle">
+              {user?.email ? (
+                <>We sent a verification email to <strong>{user.email}</strong></>
+              ) : (
+                <>We sent a verification email to your admin inbox</>
+              )}
             </p>
           </div>
 
-          <div className="verify-visual-card">
-            <div className="verify-visual-orb verify-visual-orb-a" />
-            <div className="verify-visual-orb verify-visual-orb-b" />
-            <div className="verify-visual-grid" />
-            <div className="verify-visual-content">
-              <div className="verify-visual-brand">
-                <Image
-                  src="/prayloomlogo.svg"
-                  alt="PrayLoom"
-                  width={220}
-                  height={64}
-                  className="verify-visual-logo"
-                  priority
-                />
-              </div>
-              <div className="verify-visual-mail">
-                <span className="verify-mail-label">Verification sent to</span>
-                <strong>{user?.email || 'your admin inbox'}</strong>
-              </div>
-              <div className="verify-visual-flow">
-                <span>Inbox link</span>
-                <span className="verify-flow-dot" />
-                <span>Verified admin</span>
-                <span className="verify-flow-dot" />
-                <span>Workspace setup</span>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <section className="login-panel-wrap">
-          <div className="login-panel verify-panel verify-panel-clean">
-            <div className="login-panel-brand">
-              <Image src="/prayloomlogo.svg" alt="PrayLoom" width={180} height={52} className="login-panel-brand-logo" />
+          <div className="verify-center-card">
+            <div className="verify-center-callout verify-center-callout-info">
+              <span className="verify-center-callout-icon">i</span>
+              <p>{message}</p>
             </div>
 
-            <div className="login-panel-intro verify-panel-intro">
-              <div className="verify-panel-status">
-                <span className="verify-panel-status-dot" />
-                <span>{token ? 'Verification link opened' : 'Waiting for email confirmation'}</span>
+            <div className="verify-center-callout verify-center-callout-warm">
+              <span className="verify-center-callout-icon">✦</span>
+              <div>
+                <strong>Recommended</strong>
+                <p>Use the PrayLoom email link. It keeps verification fast, clean, and familiar.</p>
               </div>
-              <h1 className="login-panel-title verify-panel-title">Confirm your account.</h1>
-              <p className="login-panel-copy verify-panel-copy">
-                {user?.email ? (
-                  <>A PrayLoom email is on its way to <strong>{user.email}</strong>. Use the link in that message to continue.</>
-                ) : (
-                  <>Use the PrayLoom link from your inbox to finish verification, then sign in and continue setup.</>
-                )}
-              </p>
             </div>
 
-            <div className="login-panel-form verify-panel-form">
-              <div className="verify-panel-summary">
-                {message}
-              </div>
+            {error ? <div className="login-panel-error">{error}</div> : null}
 
-              {error ? <div className="login-panel-error">{error}</div> : null}
-
-              {token ? (
-                <button type="button" className="login-panel-submit verify-primary-action" onClick={() => void handleVerifyLink(token)} disabled={verifyingLink}>
-                  {verifyingLink ? 'Verifying email link...' : 'Verify this email link'}
-                </button>
-              ) : null}
-
-              <button type="button" className="login-panel-submit verify-primary-action" onClick={handleRefresh} disabled={checking}>
-                {checking ? 'Checking...' : 'I have opened the email link'}
+            {token ? (
+              <button type="button" className="verify-center-primary" onClick={() => void handleVerifyLink(token)} disabled={verifyingLink}>
+                {verifyingLink ? 'Verifying email link...' : 'Verify this email link'}
               </button>
+            ) : null}
 
-              {ALLOW_UNVERIFIED_ONBOARDING && user ? (
-                <button
-                  type="button"
-                  className="verify-panel-submit is-secondary is-warning verify-secondary-action"
-                  onClick={handleContinueForNow}
-                >
-                  Continue setup without verification for now
-                </button>
-              ) : null}
+            <button type="button" className="verify-center-primary" onClick={handleRefresh} disabled={checking}>
+              {checking ? 'Checking...' : 'I have opened the email link'}
+            </button>
 
-              <button type="button" className="verify-panel-submit is-secondary verify-secondary-action" onClick={handleResend} disabled={sending || !user}>
-                {sending ? 'Sending...' : 'Resend verification email'}
+            {ALLOW_UNVERIFIED_ONBOARDING && user ? (
+              <button
+                type="button"
+                className="verify-center-secondary verify-center-secondary-warm"
+                onClick={handleContinueForNow}
+              >
+                Continue setup without verification for now
               </button>
+            ) : null}
 
-              {user ? (
-                <button type="button" className="verify-panel-submit is-ghost verify-tertiary-action" onClick={() => signOut(auth)}>
-                  Sign out
-                </button>
-              ) : null}
+            <button type="button" className="verify-center-secondary" onClick={handleResend} disabled={sending || !user}>
+              {sending ? 'Sending...' : 'Resend verification email'}
+            </button>
 
-              {!user && linkVerified ? (
-                <Link href="/login" className="verify-panel-submit is-ghost verify-tertiary-action">
-                  Return to sign in
-                </Link>
-              ) : null}
+            {user ? (
+              <button type="button" className="verify-center-link" onClick={() => signOut(auth)}>
+                Sign out
+              </button>
+            ) : null}
 
-              <div className="login-panel-helper verify-panel-helper">
-                Link first. Resend only if nothing arrives after a short wait.
-              </div>
-            </div>
+            {!user && linkVerified ? (
+              <Link href="/login" className="verify-center-link">
+                Return to sign in
+              </Link>
+            ) : null}
 
-            <div className="login-panel-footer">
+            <div className="verify-center-footer">
               Need help?
               <Link href="/login" className="login-panel-link">
                 {' '}Return to sign in
