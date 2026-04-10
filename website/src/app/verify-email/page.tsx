@@ -178,114 +178,113 @@ function VerifyEmailContent() {
       </header>
 
       <main className="auth-stage">
-        <section className="login-story">
-          <div className="login-story-visual-card">
-            <div className="login-story-visual-glow login-story-visual-glow-a" />
-            <div className="login-story-visual-glow login-story-visual-glow-b" />
-            <Image
-              src="/prayloomlogo.svg"
-              alt="PrayLoom"
-              width={340}
-              height={340}
-              className="login-story-logo"
-              priority
-            />
-            <div className="login-story-visual-note login-story-visual-note-top">
-              <span className="login-story-note-label">Verification</span>
-              <strong>Secure your church admin account.</strong>
-            </div>
-            <div className="login-story-visual-note login-story-visual-note-bottom">
-              <span className="login-story-note-label">Next</span>
-              <strong>Plan. Workspace. Branding.</strong>
-            </div>
+        <section className="login-story verify-story">
+          <div className="verify-stage-label">Email checkpoint</div>
+          <div className="login-story-copyblock verify-copyblock">
+            <h1 className="login-story-title verify-story-title">
+              Open the link in your inbox.
+            </h1>
+            <p className="login-story-copy verify-story-copy">
+              We keep this step simple. Verify the founding admin email, then PrayLoom will move straight into workspace setup.
+            </p>
           </div>
 
-          <div className="login-story-copyblock">
-            <h1 className="login-story-title">
-              Confirm the account, then continue into your church setup.
-            </h1>
-            <p className="login-story-copy">
-              PrayLoom verifies the founding admin before plan selection, workspace creation, branding, and center setup so each church starts with trusted access.
-            </p>
-            <div className="login-story-highlights">
-              <div className="login-story-highlight">
-                <span className="login-story-highlight-value">Verified Access</span>
-                <span className="login-story-highlight-copy">Protect your church workspace before any branding or member setup begins.</span>
+          <div className="verify-visual-card">
+            <div className="verify-visual-orb verify-visual-orb-a" />
+            <div className="verify-visual-orb verify-visual-orb-b" />
+            <div className="verify-visual-grid" />
+            <div className="verify-visual-content">
+              <div className="verify-visual-brand">
+                <Image
+                  src="/prayloomlogo.svg"
+                  alt="PrayLoom"
+                  width={220}
+                  height={64}
+                  className="verify-visual-logo"
+                  priority
+                />
               </div>
-              <div className="login-story-highlight">
-                <span className="login-story-highlight-value">Smooth Continuation</span>
-                <span className="login-story-highlight-copy">As soon as verification is active, PrayLoom will continue into plan and church onboarding.</span>
+              <div className="verify-visual-mail">
+                <span className="verify-mail-label">Verification sent to</span>
+                <strong>{user?.email || 'your admin inbox'}</strong>
+              </div>
+              <div className="verify-visual-flow">
+                <span>Inbox link</span>
+                <span className="verify-flow-dot" />
+                <span>Verified admin</span>
+                <span className="verify-flow-dot" />
+                <span>Workspace setup</span>
               </div>
             </div>
           </div>
         </section>
 
         <section className="login-panel-wrap">
-          <div className="login-panel verify-panel">
+          <div className="login-panel verify-panel verify-panel-clean">
             <div className="login-panel-brand">
               <Image src="/prayloomlogo.svg" alt="PrayLoom" width={180} height={52} className="login-panel-brand-logo" />
             </div>
 
-            <div className="login-panel-intro">
-              <h1 className="login-panel-title">Confirm your account.</h1>
-              <p className="login-panel-copy">
+            <div className="login-panel-intro verify-panel-intro">
+              <div className="verify-panel-status">
+                <span className="verify-panel-status-dot" />
+                <span>{token ? 'Verification link opened' : 'Waiting for email confirmation'}</span>
+              </div>
+              <h1 className="login-panel-title verify-panel-title">Confirm your account.</h1>
+              <p className="login-panel-copy verify-panel-copy">
                 {user?.email ? (
-                  <>We sent a verification email to <strong>{user.email}</strong>. Open the PrayLoom link in your inbox to continue into subscription and church setup.</>
+                  <>A PrayLoom email is on its way to <strong>{user.email}</strong>. Use the link in that message to continue.</>
                 ) : (
                   <>Use the PrayLoom link from your inbox to finish verification, then sign in and continue setup.</>
                 )}
               </p>
             </div>
 
-            <div className="login-panel-form">
-              <div className="verify-panel-note">
+            <div className="login-panel-form verify-panel-form">
+              <div className="verify-panel-summary">
                 {message}
-              </div>
-
-              <div className="verify-panel-note">
-                <strong>Recommended:</strong> use the PrayLoom email link. This is the same link-based flow most modern products use because it keeps verification fast and clean.
               </div>
 
               {error ? <div className="login-panel-error">{error}</div> : null}
 
               {token ? (
-                <button type="button" className="login-panel-submit" onClick={() => void handleVerifyLink(token)} disabled={verifyingLink}>
+                <button type="button" className="login-panel-submit verify-primary-action" onClick={() => void handleVerifyLink(token)} disabled={verifyingLink}>
                   {verifyingLink ? 'Verifying email link...' : 'Verify this email link'}
                 </button>
               ) : null}
 
-              <button type="button" className="login-panel-submit" onClick={handleRefresh} disabled={checking}>
+              <button type="button" className="login-panel-submit verify-primary-action" onClick={handleRefresh} disabled={checking}>
                 {checking ? 'Checking...' : 'I have opened the email link'}
               </button>
 
               {ALLOW_UNVERIFIED_ONBOARDING && user ? (
                 <button
                   type="button"
-                  className="verify-panel-submit is-secondary is-warning"
+                  className="verify-panel-submit is-secondary is-warning verify-secondary-action"
                   onClick={handleContinueForNow}
                 >
                   Continue setup without verification for now
                 </button>
               ) : null}
 
-              <button type="button" className="verify-panel-submit is-secondary" onClick={handleResend} disabled={sending || !user}>
+              <button type="button" className="verify-panel-submit is-secondary verify-secondary-action" onClick={handleResend} disabled={sending || !user}>
                 {sending ? 'Sending...' : 'Resend verification email'}
               </button>
 
               {user ? (
-                <button type="button" className="verify-panel-submit is-ghost" onClick={() => signOut(auth)}>
+                <button type="button" className="verify-panel-submit is-ghost verify-tertiary-action" onClick={() => signOut(auth)}>
                   Sign out
                 </button>
               ) : null}
 
               {!user && linkVerified ? (
-                <Link href="/login" className="verify-panel-submit is-ghost">
+                <Link href="/login" className="verify-panel-submit is-ghost verify-tertiary-action">
                   Return to sign in
                 </Link>
               ) : null}
 
-              <div className="login-panel-helper">
-                Tip: click the PrayLoom link in your email first. If nothing arrives, use resend once and wait for the new message before trying again.
+              <div className="login-panel-helper verify-panel-helper">
+                Link first. Resend only if nothing arrives after a short wait.
               </div>
             </div>
 
