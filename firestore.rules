@@ -8,7 +8,7 @@ service cloud.firestore {
     function isVerified() {
       return isSignedIn() && (
         request.auth.token.email_verified == true
-        || (userExists() && userData().emailVerification.status == 'verified')
+        || userData().emailVerification.status == 'verified'
       );
     }
 
@@ -16,32 +16,24 @@ service cloud.firestore {
       return /databases/$(database)/documents/users/$(request.auth.uid);
     }
 
-    function userExists() {
-      return isSignedIn() && exists(userDocPath());
-    }
-
     function userData() {
       return get(userDocPath()).data;
     }
 
     function isPlatformAdmin() {
-      return userExists() && userData().globalRole == 'platform_admin';
+      return isSignedIn() && userData().globalRole == 'platform_admin';
     }
 
     function churchDocPath(churchId) {
       return /databases/$(database)/documents/churches/$(churchId);
     }
 
-    function churchExists(churchId) {
-      return exists(churchDocPath(churchId));
+    function churchData(churchId) {
+      return get(churchDocPath(churchId)).data;
     }
 
     function memberDocPath(churchId) {
       return /databases/$(database)/documents/churches/$(churchId)/members/$(request.auth.uid);
-    }
-
-    function memberExists(churchId) {
-      return isSignedIn() && exists(memberDocPath(churchId));
     }
 
     function memberData(churchId) {
@@ -49,7 +41,7 @@ service cloud.firestore {
     }
 
     function belongsToChurch(churchId) {
-      return memberExists(churchId)
+      return isSignedIn()
         && memberData(churchId).status == 'active';
     }
 
@@ -88,8 +80,7 @@ service cloud.firestore {
 
     function isBootstrapChurchCreator(churchId) {
       return isSignedIn()
-        && churchExists(churchId)
-        && get(churchDocPath(churchId)).data.createdByUserId == request.auth.uid;
+        && churchData(churchId).createdByUserId == request.auth.uid;
     }
 
     match /users/{userId} {
@@ -156,7 +147,8 @@ service cloud.firestore {
 
       match /students/{studentId} {
         allow read: if canReadChurch(churchId);
-        allow create, update: if canWriteOperationalData(churchId);
+        allow create, update: if canWriteOperationalData(churchId)
+          && request.resource.data.churchId == churchId;
         allow delete: if canManageChurch(churchId);
       }
 
@@ -168,13 +160,20 @@ service cloud.firestore {
 
       match /attendanceSessions/{sessionId} {
         allow read: if canReadChurch(churchId);
-        allow create, update: if canWriteOperationalData(churchId);
+        allow create: if canManageChurch(churchId)
+          && request.resource.data.churchId == churchId;
+        allow create: if (isTeacher(churchId) || isVolunteer(churchId))
+          && request.resource.data.churchId == churchId
+          && request.resource.data.teacherId == request.auth.uid;
+        allow update: if canManageChurch(churchId)
+          && request.resource.data.churchId == churchId;
         allow delete: if canManageChurch(churchId);
       }
 
       match /attendanceRecords/{recordId} {
         allow read: if canReadChurch(churchId);
-        allow create, update: if canWriteOperationalData(churchId);
+        allow create, update: if canWriteOperationalData(churchId)
+          && request.resource.data.churchId == churchId;
         allow delete: if canManageChurch(churchId);
       }
 

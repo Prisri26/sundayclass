@@ -12,6 +12,26 @@ export default function OnboardingPage() {
   const { user, loading, isEmailVerified } = useAuth();
   const canProceedUnverified = ALLOW_UNVERIFIED_ONBOARDING;
   const defaultTimezone = useMemo(() => Intl.DateTimeFormat().resolvedOptions().timeZone || 'Asia/Kolkata', []);
+  const timezoneOptions = useMemo(() => {
+    const supportedValuesOf = (Intl as any).supportedValuesOf;
+    if (typeof supportedValuesOf === 'function') {
+      const zones = supportedValuesOf.call(Intl, 'timeZone') as string[];
+      if (Array.isArray(zones) && zones.length > 0) return zones;
+    }
+    return [
+      'Asia/Kolkata',
+      'Asia/Dubai',
+      'Asia/Singapore',
+      'Europe/London',
+      'Europe/Berlin',
+      'America/New_York',
+      'America/Chicago',
+      'America/Denver',
+      'America/Los_Angeles',
+      'Australia/Sydney',
+      'Pacific/Auckland',
+    ];
+  }, []);
   const [fullName, setFullName] = useState('');
   const [churchName, setChurchName] = useState('');
   const [slug, setSlug] = useState('');
@@ -211,13 +231,16 @@ export default function OnboardingPage() {
 
                     <div className="onboard-field">
                       <label className="onboard-label">Timezone</label>
-                      <input
+                      <select
                         className="onboard-input"
                         value={timezone}
                         onChange={(e) => setTimezone(e.target.value)}
-                        placeholder="Asia/Kolkata"
                         required
-                      />
+                      >
+                        {timezoneOptions.map((zone) => (
+                          <option key={zone} value={zone}>{zone}</option>
+                        ))}
+                      </select>
                     </div>
                   </div>
                 </section>

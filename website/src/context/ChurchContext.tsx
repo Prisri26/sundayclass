@@ -31,6 +31,17 @@ const ChurchContext = createContext<ChurchContextValue>({
   setActiveChurchId: () => undefined,
 });
 
+function shouldSkipChurchResolution(pathname: string) {
+  return (
+    pathname === '/login'
+    || pathname === '/signup'
+    || pathname === '/change-password'
+    || pathname === '/forgot-password'
+    || pathname === '/verify-email'
+    || pathname.startsWith('/onboarding')
+  );
+}
+
 export function ChurchProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
   const pathname = usePathname();
@@ -41,11 +52,7 @@ export function ChurchProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState<boolean>(MULTI_TENANT_ENABLED);
 
   useEffect(() => {
-    const skipSubscription =
-      pathname === '/login'
-      || pathname === '/signup'
-      || pathname === '/change-password'
-      || pathname.startsWith('/onboarding');
+    const skipSubscription = shouldSkipChurchResolution(pathname);
 
     if (!MULTI_TENANT_ENABLED) {
       setLoading(false);

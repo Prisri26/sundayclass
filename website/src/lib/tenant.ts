@@ -84,6 +84,7 @@ async function getChurchSummary(churchId: string): Promise<ChurchSummary | null>
 async function getAccessForChurchIds(userId: string, churchIds: string[]): Promise<UserChurchAccess[]> {
   const uniqueChurchIds = [...new Set(churchIds.filter(Boolean))];
   if (uniqueChurchIds.length === 0) return [];
+  const profile = await getUserProfile(userId);
 
   const results = await Promise.all(
     uniqueChurchIds.map(async (churchId) => {
@@ -95,7 +96,6 @@ async function getAccessForChurchIds(userId: string, churchIds: string[]): Promi
         return null;
       }
 
-      const profile = await getUserProfile(userId);
       await ensureMembershipProfile(userId, churchId, membership, profile);
 
       const church = await getChurchSummary(churchId);

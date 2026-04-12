@@ -5,25 +5,24 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getFirestore } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
 
-// ⚠️ Replace these with your own Firebase project credentials
-// Get them from: https://console.firebase.google.com → Project Settings → Your Apps
-// const firebaseConfig = {
-//   apiKey: "YOUR_API_KEY",
-//   authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-//   projectId: "YOUR_PROJECT_ID",
-//   storageBucket: "YOUR_PROJECT_ID.appspot.com",
-//   messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-//   appId: "YOUR_APP_ID",
-// };
+function requireEnv(name: string): string {
+  const value = process.env[name];
+  if (!value) {
+    throw new Error(
+      `[mobile/firebase] Missing required env var: ${name}. ` +
+      `Create mobile/.env from mobile/.env.example and restart the app.`,
+    );
+  }
+  return value;
+}
 
 const firebaseConfig = {
-  apiKey: "AIzaSyD7mSfLP0sHEylUCK5c3AM_Ab7k1nFA7uY",
-  authDomain: "sunday-school-attendance-8e42b.firebaseapp.com",
-  projectId: "sunday-school-attendance-8e42b",
-  storageBucket: "sunday-school-attendance-8e42b.firebasestorage.app",
-  messagingSenderId: "709717855581",
-  appId: "1:709717855581:web:94036cfbe694a5a1c16cb4",
-  measurementId: "G-5GH9H3JZ90"
+  apiKey: requireEnv('EXPO_PUBLIC_FIREBASE_API_KEY'),
+  authDomain: requireEnv('EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN'),
+  projectId: requireEnv('EXPO_PUBLIC_FIREBASE_PROJECT_ID'),
+  storageBucket: requireEnv('EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET'),
+  messagingSenderId: requireEnv('EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID'),
+  appId: requireEnv('EXPO_PUBLIC_FIREBASE_APP_ID'),
 };
 
 

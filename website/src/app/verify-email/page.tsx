@@ -68,10 +68,8 @@ function VerifyEmailContent() {
       const data = userDoc.exists() ? userDoc.data() as { defaultChurchId?: string } : null;
       const nextPath = data?.defaultChurchId ? '/dashboard' : '/onboarding/plan';
       router.replace(nextPath);
-      window.location.assign(nextPath);
     } catch {
       router.replace('/onboarding/plan');
-      window.location.assign('/onboarding/plan');
     }
   };
 

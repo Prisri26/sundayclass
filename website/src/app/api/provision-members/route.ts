@@ -114,6 +114,7 @@ async function createProvisionedAccount(churchId: string, provisioningId: string
       {
         status: 'failed',
         failureReason: error?.message || 'Unknown provisioning error',
+        temporaryPassword: FieldValue.delete(),
         updatedAt: FieldValue.serverTimestamp(),
       },
       { merge: true },
@@ -143,6 +144,7 @@ export async function POST(request: NextRequest) {
     const provisioningSnapshot = await adminDb
       .collection(`churches/${churchId}/provisioningMembers`)
       .where('status', '==', 'pending_provisioning')
+      .limit(20)
       .get();
 
     if (provisioningSnapshot.empty) {
